@@ -17,13 +17,17 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { IconPicker } from "@/components/icon-picker";
+import { Slider } from "@/components/ui/slider";
 
 export default function Page() {
+  const [SelectedIcon, setSelectedIcon] = useState<any>(Atom);
+
   const [config, setConfig] = useState({
     bgColor: "#111111",
     fgColor: "#FFFFFF",
-    elementSize: 96,
-    size: 192,
+    iconSize: 96,
+    iconStrokeWidth: 1,
+    imageSize: 512,
     format: "png",
   });
 
@@ -43,12 +47,17 @@ export default function Page() {
             }}
             className="h-[192px] w-[192px] flex items-center justify-center"
           >
-            <Atom size={config.elementSize} />
+            {
+              <SelectedIcon
+                size={config.iconSize}
+                strokeWidth={config.iconStrokeWidth}
+              />
+            }
           </div>
         </div>
 
-        <div className="h-full rounded-md border flex flex-col gap-2 p-4">
-          <IconPicker />
+        <div className="h-full rounded-md border flex flex-col gap-2 p-4 overflow-auto">
+          <IconPicker onChangeIcon={(Icon) => setSelectedIcon(Icon)} />
 
           <Label>Cor de destaque</Label>
           <ColorPicker
@@ -82,16 +91,16 @@ export default function Page() {
             </SelectContent>
           </Select>
 
-          <Label>Tamanho (px)</Label>
+          <Label>Tamanho da imagem final (px)</Label>
           <Select
-            value={config.size.toString()}
+            value={config.imageSize.toString()}
             onValueChange={(value) =>
-              setConfig({ ...config, size: parseInt(value) })
+              setConfig({ ...config, imageSize: parseInt(value) })
             }
           >
             <SelectTrigger>
               <SelectValue placeholder="Selecione um tamanho de imagem">
-                {config.size.toString()}
+                {config.imageSize.toString()}
               </SelectValue>
             </SelectTrigger>
             <SelectContent>
@@ -100,6 +109,28 @@ export default function Page() {
               <SelectItem value="1024">1024px</SelectItem>
             </SelectContent>
           </Select>
+
+          <Label>Espessura do traçado</Label>
+          <Slider
+            value={[config.iconStrokeWidth]}
+            onValueChange={(value) => {
+              setConfig({ ...config, iconStrokeWidth: value[0] });
+            }}
+            max={4}
+            min={0.1}
+            step={0.5}
+          />
+
+          <Label>Tamanho do ícone</Label>
+          <Slider
+            value={[config.iconSize]}
+            onValueChange={(value) => {
+              setConfig({ ...config, iconSize: value[0] });
+            }}
+            max={152}
+            min={54}
+            step={8}
+          />
         </div>
       </div>
 
