@@ -43,7 +43,7 @@ export default function Page() {
   };
   return (
     <div className="max-w-screen-sm min-h-screen mx-auto p-8 flex flex-col items-center justify-center space-y-4">
-      <CardAnimatedBorder>
+      <CardAnimatedBorder className="mb-2">
         <button
           onClick={() => {
             navigator.clipboard.writeText(pass);
@@ -62,7 +62,7 @@ export default function Page() {
         </button>
       </CardAnimatedBorder>
 
-      <div className="w-full space-y-2">
+      <div className="max-w-[400px] flex flex-col gap-2">
         <Label>Tamanho</Label>
         <Input
           value={config.size}
@@ -127,7 +127,7 @@ export default function Page() {
           </Label>
         </div>
 
-        <Button className="w-full" onClick={createPass}>
+        <Button className="w-full mt-4" onClick={createPass}>
           Gerar
         </Button>
       </div>

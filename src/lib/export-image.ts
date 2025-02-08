@@ -7,7 +7,7 @@ interface QRCodeConfig {
   size?: number;
 }
 
-export const exportAsImage = async (
+export const exportEssay = async (
   element: HTMLElement,
   imageFileName: string
 ): Promise<void> => {
@@ -22,6 +22,53 @@ export const exportAsImage = async (
       },
     });
     downloadImage(imageUrl, imageFileName);
+  } catch (err) {
+    console.error("Erro ao exportar imagem:", err);
+  }
+};
+
+export const exportAsImage = async (
+  element: HTMLElement | null,
+  imageFileName: string,
+  config?: any
+): Promise<void> => {
+  if (!element) {
+    toast.error("Erro ao exportar imagem!");
+    return;
+  }
+
+  try {
+    const imageUrl = await htmlToImage.toPng(element, {
+      cacheBust: true,
+      style: {},
+      pixelRatio: 2,
+    });
+    downloadImage(imageUrl, imageFileName);
+  } catch (err) {
+    console.error("Erro ao exportar imagem:", err);
+  }
+};
+
+export const copyImage = async (
+  element: HTMLElement | null,
+  config?: any
+): Promise<void> => {
+  if (!element) {
+    toast.error("Erro ao copiar imagem!");
+    return;
+  }
+
+  try {
+    const imageUrl = await htmlToImage.toPng(element, {
+      cacheBust: true,
+      style: {},
+      pixelRatio: 2,
+    });
+
+    const blob = await (await fetch(imageUrl)).blob();
+    await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
+
+    toast.success("Imagem copiada!");
   } catch (err) {
     console.error("Erro ao exportar imagem:", err);
   }

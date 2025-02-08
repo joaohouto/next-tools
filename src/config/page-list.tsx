@@ -1,6 +1,17 @@
-import { Key, NotepadText, QrCode, Squirrel, Timer } from "lucide-react";
+import { Atom, Key, NotepadText, QrCode, Timer, Workflow } from "lucide-react";
 
 export const PAGE_LIST = [
+  {
+    title: "Relógio Pomodoro",
+    path: "/pomodoro",
+    icon: <Timer />,
+  },
+  {
+    title: "Folha de Redação",
+    path: "/essay",
+    icon: <NotepadText />,
+  },
+
   {
     title: "Gerador de QRCode",
     path: "/qrcode",
@@ -11,19 +22,15 @@ export const PAGE_LIST = [
     path: "/password",
     icon: <Key />,
   },
+
   {
-    title: "Folha de Redação",
-    path: "/essay",
-    icon: <NotepadText />,
-  },
-  {
-    title: "Relógio Pomodoro",
-    path: "/pomodoro",
-    icon: <Timer />,
-  },
-  {
-    title: "Criador de Ícone",
+    title: "Gerador de Ícone",
     path: "/icon",
-    icon: <Squirrel />,
+    icon: <Atom />,
+  },
+  {
+    title: "Diagramas Mermaid",
+    path: "/mermaid",
+    icon: <Workflow />,
   },
 ];

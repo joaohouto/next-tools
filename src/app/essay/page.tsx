@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { useDebounce } from "@/lib/debounce";
-import { exportAsImage } from "@/lib/export-image";
+import { exportEssay } from "@/lib/export-image";
 import { Download, Minus, Moon, Plus, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useEffect, useRef, useState } from "react";
@@ -59,7 +59,7 @@ export default function Page() {
           size="icon"
           title="Baixar como .png"
           onClick={() =>
-            exportAsImage(
+            exportEssay(
               textRef.current,
               `redacao-${dayjs().format("DD-MM-YYYY-HH-mm")}`
             )
