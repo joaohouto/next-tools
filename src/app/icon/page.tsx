@@ -1,12 +1,10 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { Atom, CopyIcon, DownloadIcon, Moon, Sun } from "lucide-react";
+import { CopyIcon, DownloadIcon, Moon, Sun } from "lucide-react";
 import { copyImage, exportAsImage } from "@/lib/export-image";
 import { Button } from "@/components/ui/button";
-import dayjs from "dayjs";
 
-import { useTheme } from "next-themes";
 import { Label } from "@/components/ui/label";
 import { ColorPicker } from "@/components/color-picker";
 import {
@@ -16,50 +14,59 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { IconPicker } from "@/components/icon-picker";
 import { Slider } from "@/components/ui/slider";
 
+import { IconPickerInput } from "@/components/icon-picker";
+import { IconRenderer } from "@/hooks/use-icon-picker";
+
 export default function Page() {
-  const [SelectedIcon, setSelectedIcon] = useState<any>(Atom);
+  const [selectedIcon, setSelectedIcon] = useState("Atom");
 
   const [config, setConfig] = useState({
     bgColor: "#111111",
     fgColor: "#FFFFFF",
-    iconSize: 96,
+    iconSize: 126,
     iconStrokeWidth: 1,
-    imageSize: 512,
+    iconRotation: 0,
+    borderRadius: 0,
+    imageSize: 192,
     format: "png",
   });
 
   const imageRef = useRef(null);
 
-  const { theme, setTheme } = useTheme();
-
   return (
-    <div className="w-screen h-screen p-4 gap-4 flex flex-col overflow-hidden">
-      <div className="grid h-[calc(100vh-36px-48px)] grid-rows-2 gap-6  lg:grid-cols-[auto_274px] lg:grid-rows-1">
-        <div className="rounded-md border overflow-auto p-8 flex items-center justify-center bg-center bg-[radial-gradient(theme(colors.neutral.300)_1px,transparent_1px)] dark:bg-[radial-gradient(theme(colors.neutral.800)_1px,transparent_1px)] bg-[size:20px_20px]">
-          <div
-            id="icon"
+    <div className="w-screen h-screen p-4 grid grid-rows-[220px_auto] gap-6 lg:grid-cols-[auto_274px] lg:grid-rows-1">
+      <div className="rounded-md border overflow-auto p-8 flex items-center justify-center bg-center bg-[radial-gradient(theme(colors.neutral.300)_1px,transparent_1px)] dark:bg-[radial-gradient(theme(colors.neutral.800)_1px,transparent_1px)] bg-[size:20px_20px]">
+        <div
+          ref={imageRef}
+          id="icon"
+          style={{
+            background: config.bgColor,
+            color: config.fgColor,
+            borderRadius: `${config.borderRadius}%`,
+          }}
+          className="h-[192px] w-[192px] flex items-center justify-center"
+        >
+          <IconRenderer
+            size={config.iconSize}
+            strokeWidth={config.iconStrokeWidth}
+            icon={selectedIcon}
             style={{
-              background: config.bgColor,
-              color: config.fgColor,
+              transform: `rotate(${config.iconRotation}deg)`,
             }}
-            className="h-[192px] w-[192px] flex items-center justify-center"
-          >
-            {
-              <SelectedIcon
-                size={config.iconSize}
-                strokeWidth={config.iconStrokeWidth}
-              />
-            }
-          </div>
+          />
         </div>
+      </div>
 
-        <div className="h-full rounded-md border flex flex-col gap-2 p-4 overflow-auto">
-          <IconPicker onChangeIcon={(Icon) => setSelectedIcon(Icon)} />
+      <div className="h-full rounded-md border flex flex-col justify-between">
+        <div className="flex flex-col gap-2 p-4 overflow-auto">
+          <IconPickerInput
+            defaultIcon="Atom"
+            onChange={(iconName) => setSelectedIcon(iconName)}
+          />
 
-          <Label>Cor de destaque</Label>
+          <Label>Cor do ícone</Label>
           <ColorPicker
             color={config.fgColor}
             setColor={(color) => {
@@ -74,6 +81,71 @@ export default function Page() {
               setConfig({ ...config, bgColor: color });
             }}
           />
+
+          <Label>Espessura do traçado</Label>
+          <div className="flex gap-2">
+            <div className="font-mono bg-muted text-muted-foreground rounded-md text-sm h-6 w-12 flex items-center justify-center">
+              {config.iconStrokeWidth.toFixed(1)}
+            </div>
+
+            <Slider
+              value={[config.iconStrokeWidth]}
+              onValueChange={(value) => {
+                setConfig({ ...config, iconStrokeWidth: value[0] });
+              }}
+              max={4}
+              min={0}
+              step={0.5}
+            />
+          </div>
+
+          <Label>Tamanho do ícone</Label>
+          <div className="flex gap-2">
+            <div className="font-mono bg-muted text-muted-foreground rounded-md text-sm h-6 w-12 flex items-center justify-center">
+              {config.iconSize}
+            </div>
+            <Slider
+              value={[config.iconSize]}
+              onValueChange={(value) => {
+                setConfig({ ...config, iconSize: value[0] });
+              }}
+              max={192}
+              min={54}
+              step={8}
+            />
+          </div>
+
+          <Label>Rotação</Label>
+          <div className="flex gap-2">
+            <div className="font-mono bg-muted text-muted-foreground rounded-md text-sm h-6 w-12 flex items-center justify-center">
+              {config.iconRotation}°
+            </div>
+            <Slider
+              value={[config.iconRotation]}
+              onValueChange={(value) => {
+                setConfig({ ...config, iconRotation: value[0] });
+              }}
+              max={180}
+              min={-180}
+              step={1}
+            />
+          </div>
+
+          <Label>Arredondamento de canto</Label>
+          <div className="flex gap-2">
+            <div className="font-mono bg-muted text-muted-foreground rounded-md text-sm h-6 w-12 flex items-center justify-center">
+              {config.borderRadius}%
+            </div>
+            <Slider
+              value={[config.borderRadius]}
+              onValueChange={(value) => {
+                setConfig({ ...config, borderRadius: value[0] });
+              }}
+              max={50}
+              min={0}
+              step={5}
+            />
+          </div>
 
           <Label>Formato</Label>
           <Select
@@ -91,7 +163,7 @@ export default function Page() {
             </SelectContent>
           </Select>
 
-          <Label>Tamanho da imagem final (px)</Label>
+          <Label>Tamanho da imagem final</Label>
           <Select
             value={config.imageSize.toString()}
             onValueChange={(value) =>
@@ -100,7 +172,7 @@ export default function Page() {
           >
             <SelectTrigger>
               <SelectValue placeholder="Selecione um tamanho de imagem">
-                {config.imageSize.toString()}
+                {config.imageSize.toString()}px
               </SelectValue>
             </SelectTrigger>
             <SelectContent>
@@ -109,64 +181,42 @@ export default function Page() {
               <SelectItem value="1024">1024px</SelectItem>
             </SelectContent>
           </Select>
+        </div>
 
-          <Label>Espessura do traçado</Label>
-          <Slider
-            value={[config.iconStrokeWidth]}
-            onValueChange={(value) => {
-              setConfig({ ...config, iconStrokeWidth: value[0] });
-            }}
-            max={4}
-            min={0.1}
-            step={0.5}
-          />
+        <div className="grid grid-cols-2 items-center gap-2 p-4">
+          <Button
+            variant="outline"
+            onClick={() =>
+              copyImage(
+                imageRef.current,
+                {
+                  canvasHeight: config.imageSize,
+                  canvasWidth: config.imageSize,
+                },
+                config.format
+              )
+            }
+          >
+            <CopyIcon /> Copiar
+          </Button>
 
-          <Label>Tamanho do ícone</Label>
-          <Slider
-            value={[config.iconSize]}
-            onValueChange={(value) => {
-              setConfig({ ...config, iconSize: value[0] });
-            }}
-            max={152}
-            min={54}
-            step={8}
-          />
+          <Button
+            onClick={() =>
+              exportAsImage(
+                imageRef.current,
+                `icon`,
+                {
+                  canvasHeight: config.imageSize,
+                  canvasWidth: config.imageSize,
+                },
+                config.format
+              )
+            }
+          >
+            <DownloadIcon /> Download
+          </Button>
         </div>
       </div>
-
-      <nav className="flex flex-row-reverse items-center gap-2">
-        <Button variant="outline" onClick={() => copyImage(imageRef.current)}>
-          <CopyIcon /> Copiar
-        </Button>
-
-        <Button
-          variant="outline"
-          onClick={() =>
-            exportAsImage(
-              imageRef.current,
-              `icon-${dayjs().format("DD-MM-YYYY-HH-mm")}`
-            )
-          }
-        >
-          <DownloadIcon /> Download
-        </Button>
-
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={() => {
-            if (theme === "light") {
-              setTheme("dark");
-            } else {
-              setTheme("light");
-            }
-          }}
-          title="Alternar tema"
-          className="btn"
-        >
-          {theme === "dark" ? <Sun size={14} /> : <Moon size={14} />}
-        </Button>
-      </nav>
     </div>
   );
 }

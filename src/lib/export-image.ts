@@ -27,10 +27,39 @@ export const exportEssay = async (
   }
 };
 
+interface Options {
+  width?: number;
+  height?: number;
+  backgroundColor?: string;
+  canvasWidth?: number;
+  canvasHeight?: number;
+  style?: Partial<CSSStyleDeclaration>;
+  filter?: (domNode: HTMLElement) => boolean;
+  quality?: number;
+  cacheBust?: boolean;
+  includeQueryParams?: boolean;
+  imagePlaceholder?: string;
+  pixelRatio?: number;
+  skipFonts?: boolean;
+  preferredFontFormat?:
+    | "woff"
+    | "woff2"
+    | "truetype"
+    | "opentype"
+    | "embedded-opentype"
+    | "svg"
+    | string;
+  fontEmbedCSS?: string;
+  skipAutoScale?: boolean;
+  type?: string;
+  fetchRequestInit?: RequestInit;
+}
+
 export const exportAsImage = async (
   element: HTMLElement | null,
   imageFileName: string,
-  config?: any
+  config?: Options,
+  type?: string
 ): Promise<void> => {
   if (!element) {
     toast.error("Erro ao exportar imagem!");
@@ -38,10 +67,20 @@ export const exportAsImage = async (
   }
 
   try {
-    const imageUrl = await htmlToImage.toPng(element, {
+    let render;
+    switch (type) {
+      case "svg":
+        render = htmlToImage.toSvg;
+        break;
+      default:
+        render = htmlToImage.toPng;
+    }
+
+    const imageUrl = await render(element, {
       cacheBust: true,
-      style: {},
-      pixelRatio: 2,
+      canvasHeight: config?.canvasHeight,
+      canvasWidth: config?.canvasWidth,
+      pixelRatio: config?.pixelRatio,
     });
     downloadImage(imageUrl, imageFileName);
   } catch (err) {
@@ -51,7 +90,8 @@ export const exportAsImage = async (
 
 export const copyImage = async (
   element: HTMLElement | null,
-  config?: any
+  config?: Options,
+  type?: string
 ): Promise<void> => {
   if (!element) {
     toast.error("Erro ao copiar imagem!");
@@ -59,14 +99,36 @@ export const copyImage = async (
   }
 
   try {
-    const imageUrl = await htmlToImage.toPng(element, {
+    let render;
+
+    switch (type) {
+      case "svg":
+        render = htmlToImage.toSvg;
+        break;
+      default:
+        render = htmlToImage.toPng;
+    }
+
+    const imageUrl = await render(element, {
       cacheBust: true,
-      style: {},
-      pixelRatio: 2,
+      canvasHeight: config?.canvasHeight,
+      canvasWidth: config?.canvasWidth,
+      pixelRatio: config?.pixelRatio,
     });
 
     const blob = await (await fetch(imageUrl)).blob();
-    await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
+
+    switch (type) {
+      case "svg":
+        await navigator.clipboard.write([
+          new ClipboardItem({ "image/svg+xml": blob }),
+        ]);
+        break;
+      default:
+        await navigator.clipboard.write([
+          new ClipboardItem({ "image/png": blob }),
+        ]);
+    }
 
     toast.success("Imagem copiada!");
   } catch (err) {

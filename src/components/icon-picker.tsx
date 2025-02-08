@@ -1,89 +1,102 @@
 "use client";
 
+import { useState } from "react";
+import { IconRenderer, useIconPicker } from "@/hooks/use-icon-picker";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { useDebounce } from "@/lib/debounce";
+import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
 
-import { Atom, icons as LucideIcons } from "lucide-react";
-import React, { useEffect, useState } from "react";
-import { FixedSizeGrid as Grid } from "react-window";
-
-const COLUMN_COUNT = 5;
-const ITEM_SIZE = 90;
-
-export function IconPicker({
-  onChangeIcon,
+export const IconPickerInput = ({
+  onChange,
+  defaultIcon,
 }: {
-  onChangeIcon: (icon: any) => any;
-}) {
-  const icons = Object.entries(LucideIcons);
-
+  onChange: (icon: string) => void;
+  defaultIcon?: string;
+}) => {
   const [open, setOpen] = useState(false);
-  const [filteredIcons, setFilteredIcons] = useState(icons);
-
-  const [query, setQuery] = useState("");
-  const debouncedQuery = useDebounce(query, 500);
-
-  useEffect(() => {
-    const filtered = icons.filter(([name]) =>
-      name.toLocaleLowerCase().includes(debouncedQuery.toLocaleLowerCase())
-    );
-    setFilteredIcons(filtered);
-  }, [debouncedQuery]);
+  const [selected, setSelected] = useState<null | string>(defaultIcon || null);
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <Button variant="outline" onClick={() => setOpen(true)}>
-        <Atom />
-        Escolher ícone
-      </Button>
-
-      <DialogContent className="w-full">
-        <DialogHeader className="space-y-4">
-          <DialogTitle>Selecione um ícone</DialogTitle>
-          <Input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Pesquisar..."
-          />
+    <Dialog open={open} onOpenChange={(e) => setOpen(e)}>
+      <DialogTrigger asChild>
+        <Button variant="outline" className="min-w-[150px]">
+          {selected ? (
+            <>
+              <IconRenderer className="size-4" icon={selected} />
+              Mudar ícone
+            </>
+          ) : (
+            "Selecionar ícone"
+          )}
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Selecionar ícone</DialogTitle>
+          <DialogDescription>
+            Escolha o símbolo que melhor representa sua ideia
+          </DialogDescription>
         </DialogHeader>
-
-        <Grid
-          columnCount={COLUMN_COUNT}
-          columnWidth={ITEM_SIZE}
-          height={400}
-          rowCount={Math.ceil(filteredIcons.length / COLUMN_COUNT)}
-          rowHeight={ITEM_SIZE}
-          width={COLUMN_COUNT * ITEM_SIZE + 20}
-        >
-          {({ columnIndex, rowIndex, style }: any) => {
-            const index = rowIndex * COLUMN_COUNT + columnIndex;
-            if (index >= filteredIcons.length) return null;
-            const [name, Icon] = filteredIcons[index];
-
-            return (
-              <button
-                onClick={() => {
-                  onChangeIcon(Icon);
-                  setOpen(false);
-                }}
-                style={style}
-                className="flex flex-col items-center justify-center gap-1 text-foreground p-2 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-900"
-              >
-                <Icon size={32} />
-                <span className="text-xs w-full truncate">{name}</span>
-              </button>
-            );
+        <IconPicker
+          onChange={(icon) => {
+            setSelected(icon);
+            onChange(icon);
+            setOpen(false);
           }}
-        </Grid>
+        />
       </DialogContent>
     </Dialog>
   );
-}
+};
+
+export const IconPicker = ({
+  onChange,
+}: {
+  onChange: (icon: string) => void;
+}) => {
+  const { search, setSearch, icons, iconCount } = useIconPicker();
+
+  return (
+    <div className="relative">
+      <Input
+        placeholder={`Pesquisar em ${iconCount} ícones...`}
+        type="search"
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+      />
+      <div className="mt-2 flex h-full max-h-[400px] flex-wrap gap-2 overflow-y-scroll py-4 pb-12">
+        {icons.slice(0, 105).map(({ name, Component }) => (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                key={name}
+                type="button"
+                role="button"
+                variant="ghost"
+                onClick={() => onChange(name)}
+                className="h-11"
+              >
+                <Component className="!size-6 shrink-0" />
+                <span className="sr-only">{name}</span>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{name}</TooltipContent>
+          </Tooltip>
+        ))}
+        {icons.length === 0 && (
+          <div className="col-span-full flex grow flex-col items-center justify-center gap-2 text-center">
+            <p className="text-sm text-muted-foreground">Nada encontrado...</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};

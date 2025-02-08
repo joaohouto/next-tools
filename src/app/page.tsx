@@ -1,5 +1,12 @@
 "use client";
 
+import Image from "next/image";
+import { useRouter } from "next/navigation";
+import { motion } from "framer-motion";
+
+import { useIsMobile } from "@/hooks/use-mobile";
+import { PAGE_LIST } from "@/config/page-list";
+
 import { BadgeRotateBorder } from "@/components/badge-rotate-border";
 import {
   Command,
@@ -9,10 +16,6 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import { PAGE_LIST } from "@/config/page-list";
-import Image from "next/image";
-import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
 
 const itemVariants = {
   hidden: { y: 20, opacity: 0, filter: "blur(6px)" },
@@ -29,6 +32,8 @@ const itemVariants = {
 
 export default function Home() {
   const router = useRouter();
+
+  const isMobile = useIsMobile();
 
   return (
     <motion.div
@@ -52,7 +57,7 @@ export default function Home() {
 
       <motion.div variants={itemVariants} custom={3} className="w-full">
         <Command className="rounded-lg border shadow-md w-full">
-          <CommandInput autoFocus placeholder="Pesquisar..." />
+          <CommandInput autoFocus={!isMobile} placeholder="Pesquisar..." />
           <CommandList>
             <CommandGroup heading="Páginas">
               {PAGE_LIST?.map((page) => (
@@ -66,7 +71,7 @@ export default function Home() {
               ))}
             </CommandGroup>
 
-            <CommandEmpty>Nada encontrado.</CommandEmpty>
+            <CommandEmpty>Nenhum resultado</CommandEmpty>
           </CommandList>
         </Command>
       </motion.div>

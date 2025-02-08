@@ -5,6 +5,7 @@ import "./globals.css";
 import { CommandMenu } from "@/components/command-menu";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -36,9 +37,11 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          {children}
-          <CommandMenu />
-          <Toaster position="bottom-center" richColors />
+          <TooltipProvider>
+            {children}
+            <CommandMenu />
+            <Toaster position="bottom-center" richColors />
+          </TooltipProvider>
         </ThemeProvider>
       </body>
     </html>

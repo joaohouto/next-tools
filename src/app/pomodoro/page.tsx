@@ -144,11 +144,11 @@ export default function Page() {
 
       {!isRunning ? (
         <Button className="w-full" onClick={startPomodoro}>
-          <Play size={20} />
+          <Play fill="primary" size={24} />
         </Button>
       ) : (
         <Button className="w-full" onClick={stopPomodoro}>
-          <Pause size={20} />
+          <Pause fill="primary" size={24} />
         </Button>
       )}
 

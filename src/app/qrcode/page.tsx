@@ -121,19 +121,19 @@ export default function Page() {
           }}
         />
 
-        <Label>Cor de fundo</Label>
-        <ColorPicker
-          color={config.bgColor}
-          setColor={(color) => {
-            setConfig({ ...config, bgColor: color });
-          }}
-        />
-
         <Label>Cor de destaque</Label>
         <ColorPicker
           color={config.fgColor}
           setColor={(color) => {
             setConfig({ ...config, fgColor: color });
+          }}
+        />
+
+        <Label>Cor de fundo</Label>
+        <ColorPicker
+          color={config.bgColor}
+          setColor={(color) => {
+            setConfig({ ...config, bgColor: color });
           }}
         />
       </div>
