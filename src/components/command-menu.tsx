@@ -3,6 +3,8 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 
+import { useHotkeys } from "react-hotkeys-hook";
+
 import { Command } from "lucide-react";
 
 import {
@@ -23,21 +25,36 @@ export function CommandMenu() {
   const router = useRouter();
   const { theme, setTheme } = useTheme();
 
-  React.useEffect(() => {
-    const down = (e: KeyboardEvent) => {
-      if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
-        e.preventDefault();
-        setOpen((open) => !open);
-      }
-    };
+  const hotKeysOptions = {
+    preventDefault: true,
+    enableOnFormTags: true,
+    enableOnContentEditable: true,
+  };
 
-    document.addEventListener("keydown", down);
-    return () => document.removeEventListener("keydown", down);
-  }, []);
+  useHotkeys(
+    "ctrl+k",
+    () => {
+      setOpen((open) => !open);
+    },
+    hotKeysOptions
+  );
+
+  useHotkeys(
+    "ctrl+l",
+    () => {
+      if (theme === "light") {
+        setTheme("dark");
+      } else {
+        setTheme("light");
+      }
+    },
+    hotKeysOptions
+  );
 
   const COMMAND_LIST = [
     {
       title: "Alternar tema da interface",
+      shortcut: "L",
       onSelect: () => {
         if (theme === "light") {
           setTheme("dark");

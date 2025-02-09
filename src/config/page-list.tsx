@@ -1,4 +1,12 @@
-import { Atom, Key, NotepadText, QrCode, Timer, Workflow } from "lucide-react";
+import {
+  Atom,
+  Key,
+  NotepadText,
+  QrCode,
+  SquareTerminal,
+  Timer,
+  Workflow,
+} from "lucide-react";
 
 export const PAGE_LIST = [
   {
@@ -24,7 +32,7 @@ export const PAGE_LIST = [
   },
 
   {
-    title: "Gerador de Ícone",
+    title: "Estúdio de Ícone",
     path: "/icon",
     icon: <Atom />,
   },
@@ -32,5 +40,10 @@ export const PAGE_LIST = [
     title: "Diagramas Mermaid",
     path: "/mermaid",
     icon: <Workflow />,
+  },
+  {
+    title: "Teleprompter",
+    path: "/teleprompter",
+    icon: <SquareTerminal />,
   },
 ];

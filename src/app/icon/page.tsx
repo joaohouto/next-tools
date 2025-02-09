@@ -18,6 +18,10 @@ import { Slider } from "@/components/ui/slider";
 
 import { IconPickerInput } from "@/components/icon-picker";
 import { IconRenderer } from "@/hooks/use-icon-picker";
+import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
+import CustomSvgFromString from "@/components/svg-string";
+import { IconGridTemplate } from "@/components/icon-grid-template";
 
 export default function Page() {
   const [selectedIcon, setSelectedIcon] = useState("Atom");
@@ -25,12 +29,15 @@ export default function Page() {
   const [config, setConfig] = useState({
     bgColor: "#111111",
     fgColor: "#FFFFFF",
+    useCustomSVG: false,
+    customSVGCode: "",
     iconSize: 126,
     iconStrokeWidth: 1,
     iconRotation: 0,
     borderRadius: 0,
     imageSize: 192,
     format: "png",
+    showGuidelines: false,
   });
 
   const imageRef = useRef(null);
@@ -38,6 +45,7 @@ export default function Page() {
   return (
     <div className="w-screen h-screen p-4 grid grid-rows-[220px_auto] gap-6 lg:grid-cols-[auto_274px] lg:grid-rows-1">
       <div className="rounded-md border overflow-auto p-8 flex items-center justify-center bg-center bg-[radial-gradient(theme(colors.neutral.300)_1px,transparent_1px)] dark:bg-[radial-gradient(theme(colors.neutral.800)_1px,transparent_1px)] bg-[size:20px_20px]">
+        {config.showGuidelines && <IconGridTemplate />}
         <div
           ref={imageRef}
           id="icon"
@@ -48,14 +56,25 @@ export default function Page() {
           }}
           className="h-[192px] w-[192px] flex items-center justify-center"
         >
-          <IconRenderer
-            size={config.iconSize}
-            strokeWidth={config.iconStrokeWidth}
-            icon={selectedIcon}
-            style={{
-              transform: `rotate(${config.iconRotation}deg)`,
-            }}
-          />
+          {config.useCustomSVG ? (
+            <CustomSvgFromString
+              svgString={config.customSVGCode}
+              size={config.iconSize}
+              fill={config.fgColor}
+              style={{
+                transform: `rotate(${config.iconRotation}deg)`,
+              }}
+            />
+          ) : (
+            <IconRenderer
+              icon={selectedIcon}
+              strokeWidth={config.iconStrokeWidth}
+              size={config.iconSize}
+              style={{
+                transform: `rotate(${config.iconRotation}deg)`,
+              }}
+            />
+          )}
         </div>
       </div>
 
@@ -65,6 +84,42 @@ export default function Page() {
             defaultIcon="Atom"
             onChange={(iconName) => setSelectedIcon(iconName)}
           />
+
+          <div className="flex items-center space-x-2">
+            <Switch
+              id="custom-svg"
+              checked={config.useCustomSVG}
+              onCheckedChange={(value) => {
+                setConfig({ ...config, useCustomSVG: value });
+              }}
+            />
+            <Label htmlFor="custom-svg">Usar código SVG para ícone</Label>
+          </div>
+
+          {config.useCustomSVG && (
+            <>
+              <Label>Código SVG</Label>
+              <Textarea
+                className="h-[200px]"
+                value={config.customSVGCode}
+                placeholder="<svg ..."
+                onChange={(e) => {
+                  setConfig({ ...config, customSVGCode: e.target.value });
+                }}
+              />
+            </>
+          )}
+
+          <div className="flex items-center space-x-2">
+            <Switch
+              id="show-guidelines"
+              checked={config.showGuidelines}
+              onCheckedChange={(value) => {
+                setConfig({ ...config, showGuidelines: value });
+              }}
+            />
+            <Label htmlFor="show-guidelines">Linhas guia</Label>
+          </div>
 
           <Label>Cor do ícone</Label>
           <ColorPicker
@@ -94,7 +149,7 @@ export default function Page() {
                 setConfig({ ...config, iconStrokeWidth: value[0] });
               }}
               max={4}
-              min={0}
+              min={0.5}
               step={0.5}
             />
           </div>
@@ -127,7 +182,7 @@ export default function Page() {
               }}
               max={180}
               min={-180}
-              step={1}
+              step={15}
             />
           </div>
 

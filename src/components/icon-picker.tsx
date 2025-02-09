@@ -40,9 +40,17 @@ export const IconPickerInput = ({
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Selecionar ícone</DialogTitle>
+          <DialogTitle>Selecionar símbolo</DialogTitle>
           <DialogDescription>
-            Escolha o símbolo que melhor representa sua ideia
+            Escolha o{" "}
+            <a
+              href="https://lucide.dev/icons/"
+              target="_blank"
+              className="font-semibold"
+            >
+              Lucide Icon
+            </a>{" "}
+            que melhor representa sua ideia.
           </DialogDescription>
         </DialogHeader>
         <IconPicker
