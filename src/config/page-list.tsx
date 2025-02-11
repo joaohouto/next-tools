@@ -1,6 +1,7 @@
 import {
   Atom,
   Key,
+  Link,
   NotepadText,
   QrCode,
   SquareTerminal,
@@ -45,5 +46,10 @@ export const PAGE_LIST = [
     title: "Teleprompter",
     path: "/teleprompter",
     icon: <SquareTerminal />,
+  },
+  {
+    title: "Gerador de Domínios",
+    path: "/domain",
+    icon: <Link />,
   },
 ];
