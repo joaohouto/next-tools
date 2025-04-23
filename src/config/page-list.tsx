@@ -1,5 +1,6 @@
 import {
   Atom,
+  Image,
   Key,
   Link,
   NotepadText,
@@ -46,6 +47,11 @@ export const PAGE_LIST = [
     title: "Teleprompter",
     path: "/teleprompter",
     icon: <SquareTerminal />,
+  },
+  {
+    title: "OCR",
+    path: "/ocr",
+    icon: <Image />,
   },
   {
     title: "Gerador de Domínios",
