@@ -20,6 +20,7 @@ export default function OcrPage() {
               const url = URL.createObjectURL(blob);
               setImage(url);
               setLoading(true);
+
               Tesseract.recognize(url, "por", {
                 logger: (m) => console.log(m),
               }).then(({ data: { text } }) => {
@@ -37,11 +38,11 @@ export default function OcrPage() {
   }, []);
 
   return (
-    <div className="p-8 flex flex-col gap-4 items-center">
+    <div className="p-8 flex flex-col gap-4 items-center min-h-screen">
       <h1 className="text-2xl font-bold">OCR no Ctrl+V</h1>
       <div
         ref={dropRef}
-        className="w-96 h-60 border-2 border-dashed border-gray-400 flex items-center justify-center text-gray-500"
+        className="w-96 h-60 border-2 border-dashed rounded-md border-neutral-400 flex items-center justify-center text-neutral-500"
       >
         Cole uma imagem aqui (Ctrl+V)
       </div>
@@ -55,8 +56,7 @@ export default function OcrPage() {
       )}
 
       {!loading && text && (
-        <div className="mt-4 p-4 bg-gray-100 rounded w-96">
-          <h2 className="font-bold mb-2">Texto Reconhecido:</h2>
+        <div className="mt-4 p-4 bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 rounded-md w-96">
           <p>{text}</p>
         </div>
       )}

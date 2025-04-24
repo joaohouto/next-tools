@@ -1,16 +1,35 @@
 import {
   Atom,
+  Github,
   Image,
   Key,
   Link,
   NotepadText,
   QrCode,
+  ScanText,
   SquareTerminal,
   Timer,
   Workflow,
 } from "lucide-react";
 
 export const PAGE_LIST = [
+  {
+    title: "OCR",
+    path: "/ocr",
+    icon: <ScanText />,
+  },
+  {
+    title: "QRCode",
+    path: "/qrcode",
+    icon: <QrCode />,
+  },
+
+  {
+    title: "Gerador de Senha",
+    path: "/password",
+    icon: <Key />,
+  },
+
   {
     title: "Relógio Pomodoro",
     path: "/pomodoro",
@@ -20,17 +39,6 @@ export const PAGE_LIST = [
     title: "Folha de Redação",
     path: "/essay",
     icon: <NotepadText />,
-  },
-
-  {
-    title: "Gerador de QRCode",
-    path: "/qrcode",
-    icon: <QrCode />,
-  },
-  {
-    title: "Gerador de Senha",
-    path: "/password",
-    icon: <Key />,
   },
 
   {
@@ -48,14 +56,10 @@ export const PAGE_LIST = [
     path: "/teleprompter",
     icon: <SquareTerminal />,
   },
+
   {
-    title: "OCR",
-    path: "/ocr",
-    icon: <Image />,
-  },
-  {
-    title: "Gerador de Domínios",
-    path: "/domain",
-    icon: <Link />,
+    title: "GitHub",
+    path: "https://github.com/joaohouto/next-tools",
+    icon: <Github />,
   },
 ];
