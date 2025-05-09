@@ -7,6 +7,7 @@ import { SearchIcon, UploadIcon } from "lucide-react";
 
 import { DailySaying } from "./sayings";
 import { WeatherWidget } from "./weather-widget";
+import Image from "next/image";
 
 function Greeting() {
   const date = new Date();
@@ -47,7 +48,7 @@ export default function Page() {
       const userLinks = Array.from(anchors).map((a) => ({
         url: a.href,
         title: a.textContent || a.href,
-        favicon: `https://www.google.com/s2/favicons?domain=${a.href}&sz=128`,
+        favicon: `https://s2.googleusercontent.com/s2/favicons?domain=${a.href}&sz=32`,
       }));
 
       localStorage.setItem("userLinks", JSON.stringify(userLinks));
@@ -57,13 +58,15 @@ export default function Page() {
     reader.readAsText(file);
   };
 
-  if (error) return <div>Erro ao carregar wallpaper</div>;
-  if (!data) return <div>Carregando wallpaper...</div>;
-
   return (
     <div
       className="min-h-screen w-full flex flex-col items-center justify-between bg-cover bg-center text-white p-4"
-      style={{ backgroundImage: `url(${data.imageUrl})` }}
+      style={{
+        backgroundImage: `url(${
+          data?.imageUrl ||
+          "https://images.unsplash.com/photo-1505852679233-d9fd70aff56d"
+        })`,
+      }}
     >
       <header className="w-full flex gap-2 items-center justify-between">
         <WeatherWidget />
@@ -97,7 +100,7 @@ export default function Page() {
             <a
               key={index}
               href={link.url}
-              className="size-[48px] bg-white/10 backdrop-blur-lg rounded-full flex flex-col items-center justify-center gap-2"
+              className="size-[48px] bg-white/1 0 backdrop-blur-lg rounded-full flex flex-col items-center justify-center gap-2"
               target="_blank"
               rel="noopener noreferrer"
             >
