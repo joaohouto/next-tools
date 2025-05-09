@@ -2,12 +2,10 @@
 
 import useSWR from "swr";
 import { useEffect, useState, useRef } from "react";
-import { motion } from "framer-motion";
 import { SearchIcon, UploadIcon } from "lucide-react";
 
 import { DailySaying } from "./sayings";
 import { WeatherWidget } from "./weather-widget";
-import Image from "next/image";
 
 function Greeting() {
   const date = new Date();
@@ -23,7 +21,8 @@ export default function Page() {
   const fetcher = (url: string) => fetch(url).then((res) => res.json());
   const { data, error } = useSWR("/api/wallpaper", fetcher);
 
-  const [links, setLinks] = useState();
+  const [links, setLinks] =
+    useState<{ url: string; title: string; favicon: string }[]>();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {

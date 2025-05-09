@@ -1,5 +1,8 @@
 "use client";
 
+import { CardAnimatedBorder } from "@/components/card-animated-border";
+import ImageDropzone from "@/components/image-dropzone";
+import { Image, ScanText } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import Tesseract from "tesseract.js";
 
@@ -10,56 +13,52 @@ export default function OcrPage() {
   const dropRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const handlePaste = (e: ClipboardEvent) => {
-      const items = e.clipboardData?.items;
-      if (items) {
-        for (const item of items) {
-          if (item.type.indexOf("image") !== -1) {
-            const blob = item.getAsFile();
-            if (blob) {
-              const url = URL.createObjectURL(blob);
-              setImage(url);
-              setLoading(true);
+    if (image) {
+      setLoading(true);
 
-              Tesseract.recognize(url, "por", {
-                logger: (m) => console.log(m),
-              }).then(({ data: { text } }) => {
-                setText(text);
-                setLoading(false);
-              });
-            }
-          }
-        }
-      }
-    };
-
-    document.addEventListener("paste", handlePaste);
-    return () => document.removeEventListener("paste", handlePaste);
-  }, []);
+      Tesseract.recognize(image, "por", {
+        logger: (m) => console.log(m),
+      }).then(({ data: { text } }) => {
+        setText(text);
+        setLoading(false);
+      });
+    }
+  }, [image]);
 
   return (
-    <div className="p-8 flex flex-col gap-4 items-center min-h-screen">
-      <h1 className="text-2xl font-bold">OCR no Ctrl+V</h1>
-      <div
-        ref={dropRef}
-        className="w-96 h-60 border-2 border-dashed rounded-md border-neutral-400 flex items-center justify-center text-neutral-500"
-      >
-        Cole uma imagem aqui (Ctrl+V)
+    <div className="p-8 w-full min-h-screen">
+      <div className="w-fulll md:max-w-[680px] mx-auto grid md:grid-cols-2 grid-cols-1 content-center gap-4">
+        <div className="">
+          {image ? (
+            <div className="bg-muted rounded-xl">
+              <img src={image} alt="Preview" className="rounded-xl" />
+            </div>
+          ) : (
+            <CardAnimatedBorder className="w-full h-[200px] text-neutral-300 dark:text-neutral-700 flex flex-col justify-center items-center">
+              <ScanText size={32} />
+            </CardAnimatedBorder>
+          )}
+
+          {loading && (
+            <div className="mt-4 text-blue-500 font-semibold animate-pulse">
+              Processando imagem...
+            </div>
+          )}
+        </div>
+
+        <div className="flex flex-col gap-4">
+          <ImageDropzone
+            onUpload={(file) => {
+              const imageUrl = URL.createObjectURL(file);
+              setImage(imageUrl);
+            }}
+          />
+
+          <div className="p-4 bg-neutral-100 dark:bg-neutral-900 rounded-xl w-full">
+            {text || "Nenhum texto econtrado ainda."}
+          </div>
+        </div>
       </div>
-
-      {image && <img src={image} alt="Pasted" className="w-96 mt-4" />}
-
-      {loading && (
-        <div className="mt-4 text-blue-500 font-semibold animate-pulse">
-          Processando imagem...
-        </div>
-      )}
-
-      {!loading && text && (
-        <div className="mt-4 p-4 bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 rounded-md w-96">
-          <p>{text}</p>
-        </div>
-      )}
     </div>
   );
 }
