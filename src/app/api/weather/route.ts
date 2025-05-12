@@ -5,19 +5,15 @@ export async function GET(request: NextRequest) {
 
   const city = "Aquidauana";
 
-  // pegar LocationKey no AccuWeather
-  const locRes = await fetch(
+  /*  const locRes = await fetch(
     `https://dataservice.accuweather.com/locations/v1/cities/search?apikey=${apiKey}&q=${city}`
   );
-  const locData = await locRes.json();
-  const locationKey = locData[0]?.Key;
-
-  console.log(locData);
+  const locData = await locRes.json(); */
+  const locationKey = "38802"; //locData[0]?.Key;
 
   if (!locationKey)
     return Response.json({ error: "Local não encontrado" }, { status: 200 });
 
-  // pegar temperatura
   const weatherRes = await fetch(
     `https://dataservice.accuweather.com/currentconditions/v1/${locationKey}?apikey=${apiKey}`
   );

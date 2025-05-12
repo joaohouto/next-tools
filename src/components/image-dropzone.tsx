@@ -58,11 +58,11 @@ export default function ImageDropzone({
       onDrop={handleDrop}
       onClick={handleClick}
       className={`w-full h-48 flex flex-col items-center justify-center p-4 border-2 border-dashed rounded-xl cursor-pointer transition-all ${
-        highlight ? "border-blue-400 bg-blue-50/10" : "border-foreground/20"
+        highlight ? "border-blue-400 bg-blue-400/20" : "border-foreground/20"
       }`}
     >
       <UploadIcon size={32} className="mb-2 text-muted-foreground" />
-      <p className="text-muted-foreground text-sm text-center">
+      <p className="text-muted-foreground text-sm text-center select-none">
         Arraste, clique ou cole (Ctrl+V) uma imagem
       </p>
       <input

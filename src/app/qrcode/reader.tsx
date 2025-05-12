@@ -4,7 +4,7 @@ import { CardAnimatedBorder } from "@/components/card-animated-border";
 import ImageDropzone from "@/components/image-dropzone";
 import { QrCode } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
-import jsQR from "jsqr";
+import { BrowserQRCodeReader } from "@zxing/browser";
 
 export function QRCodeReader() {
   const [image, setImage] = useState("");
@@ -14,28 +14,16 @@ export function QRCodeReader() {
   useEffect(() => {
     if (!image) return;
 
-    const img = new Image();
-    img.src = image;
-    img.onload = () => {
-      const canvas = canvasRef.current;
-      if (!canvas) return;
+    const reader = new BrowserQRCodeReader();
 
-      const ctx = canvas.getContext("2d");
-      if (!ctx) return;
-
-      canvas.width = img.width;
-      canvas.height = img.height;
-      ctx.drawImage(img, 0, 0);
-
-      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      const code = jsQR(imageData.data, canvas.width, canvas.height);
-
-      if (code) {
-        setResult(code.data);
-      } else {
+    reader
+      .decodeFromImageUrl(image)
+      .then((result) => {
+        setResult(result.getText());
+      })
+      .catch(() => {
         setResult("Nenhum QR Code detectado.");
-      }
-    };
+      });
   }, [image]);
 
   return (
@@ -62,7 +50,7 @@ export function QRCodeReader() {
 
         <canvas ref={canvasRef} className="hidden" />
 
-        <div className="p-4 rounded-xl bg-muted text-center w-full">
+        <div className="p-4 rounded-xl bg-muted w-full">
           {result || "Nenhum QR Code lido ainda."}
         </div>
       </div>

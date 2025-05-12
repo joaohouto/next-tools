@@ -18,9 +18,6 @@ function Greeting() {
 }
 
 export default function Page() {
-  const fetcher = (url: string) => fetch(url).then((res) => res.json());
-  const { data, error } = useSWR("/api/wallpaper", fetcher);
-
   const [links, setLinks] =
     useState<{ url: string; title: string; favicon: string }[]>();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -61,13 +58,10 @@ export default function Page() {
     <div
       className="min-h-screen w-full flex flex-col items-center justify-between bg-cover bg-center text-white p-4"
       style={{
-        backgroundImage: `url(${
-          data?.imageUrl ||
-          "https://images.unsplash.com/photo-1505852679233-d9fd70aff56d"
-        })`,
+        backgroundImage: `url(https://images.unsplash.com/photo-1707430393809-784967fe6fee?w=2000)`,
       }}
     >
-      <header className="w-full flex gap-2 items-center justify-between">
+      <header className="w-full flex gap-2 items-center justify-end">
         <WeatherWidget />
       </header>
 

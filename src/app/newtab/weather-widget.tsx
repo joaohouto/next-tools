@@ -29,7 +29,7 @@ const fetcher = (url: any) => fetch(url).then((res) => res.json());
 export function WeatherWidget() {
   const { data, error } = useSWR("/api/weather", fetcher);
 
-  if (!data || !data.temperatur) return null;
+  if (!data || !data.temperature) return null;
 
   const WeatherIcon = getWeatherIcon(data.weatherIcon, data.isDayTime);
 
