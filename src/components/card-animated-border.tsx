@@ -10,7 +10,7 @@ export function CardAnimatedBorder({
 }) {
   return (
     <div className={cn("w-full", className)}>
-      <div className="group relative grid overflow-hidden rounded-xl px-4 py-5 shadow-[0_1000px_0_0_hsl(0_0%_85%)_inset] transition-colors duration-200 dark:shadow-[0_1000px_0_0_hsl(0_0%_20%)_inset]">
+      <div className="group relative grid overflow-hidden rounded-xl p-4 shadow-[0_1000px_0_0_hsl(0_0%_85%)_inset] transition-colors duration-200 dark:shadow-[0_1000px_0_0_hsl(0_0%_20%)_inset]">
         <span>
           <span
             className={cn(

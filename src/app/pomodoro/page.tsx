@@ -93,7 +93,7 @@ export default function Page() {
   }, []);
 
   return (
-    <div className="max-w-[400px] min-h-screen mx-auto p-8 gap-4 flex flex-col items-center justify-center">
+    <div className="max-w-[460px] min-h-screen mx-auto p-8 gap-4 flex flex-col items-center justify-center">
       <div>
         <svg className="w-[300px] h-[300px]" viewBox="0 0 100 100">
           <path

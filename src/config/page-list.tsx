@@ -1,5 +1,6 @@
 import {
   Atom,
+  CloudDownload,
   Github,
   Image,
   Key,
@@ -22,6 +23,12 @@ export const PAGE_LIST = [
     title: "QRCode",
     path: "/qrcode",
     icon: <QrCode />,
+  },
+
+  {
+    title: "Downloader de mídia",
+    path: "https://cobalt.tools/",
+    icon: <CloudDownload />,
   },
 
   {

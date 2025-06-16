@@ -3,15 +3,21 @@
 import { CardAnimatedBorder } from "@/components/card-animated-border";
 import ImageDropzone from "@/components/image-dropzone";
 import { Spinner } from "@/components/spinner";
-import { Image, ScanText } from "lucide-react";
-import { useState, useEffect, useRef } from "react";
+import { ScanText } from "lucide-react";
+import { useState, useEffect, useRef, KeyboardEvent } from "react";
+import { useHotkeys } from "react-hotkeys-hook";
+import { toast } from "sonner";
 import Tesseract from "tesseract.js";
 
 export default function OcrPage() {
   const [image, setImage] = useState<string | null>(null);
   const [text, setText] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(false);
-  const dropRef = useRef<HTMLDivElement>(null);
+
+  useHotkeys("ctrl+c", () => {
+    navigator.clipboard.writeText(text);
+    toast.info("Texto copiado!");
+  });
 
   useEffect(() => {
     if (image) {
@@ -28,8 +34,26 @@ export default function OcrPage() {
 
   return (
     <div className="p-8 w-full min-h-screen">
-      <div className="w-full md:max-w-[680px] mx-auto grid md:grid-cols-2 grid-cols-1 content-center gap-4">
+      <div className="w-full md:max-w-[680px] mx-auto flex flex-col content-center gap-4">
+        <ImageDropzone
+          onUpload={(file) => {
+            const imageUrl = URL.createObjectURL(file);
+            setImage(imageUrl);
+          }}
+        />
+
+        <div className="font-mono text-justify text-sm p-4 bg-muted rounded-xl w-full">
+          {text || "Nenhum texto econtrado ainda."}
+        </div>
+
         <div className="space-y-4">
+          {loading && (
+            <div className="flex items-center justify-center gap-2">
+              <Spinner />
+              <span className="text-sm text-muted-foreground">Processando</span>
+            </div>
+          )}
+
           {image ? (
             <img
               src={image}
@@ -43,26 +67,6 @@ export default function OcrPage() {
               <ScanText size={32} />
             </CardAnimatedBorder>
           )}
-
-          {loading && (
-            <div className="flex items-center justify-center gap-2">
-              <Spinner />
-              <span className="text-sm text-muted-foreground">Processando</span>
-            </div>
-          )}
-        </div>
-
-        <div className="flex flex-col gap-4">
-          <ImageDropzone
-            onUpload={(file) => {
-              const imageUrl = URL.createObjectURL(file);
-              setImage(imageUrl);
-            }}
-          />
-
-          <div className="p-4 bg-neutral-100 dark:bg-neutral-900 rounded-xl w-full">
-            {text || "Nenhum texto econtrado ainda."}
-          </div>
         </div>
       </div>
     </div>

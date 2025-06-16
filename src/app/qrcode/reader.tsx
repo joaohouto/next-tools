@@ -4,7 +4,11 @@ import { CardAnimatedBorder } from "@/components/card-animated-border";
 import ImageDropzone from "@/components/image-dropzone";
 import { QrCode } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
+
 import { BrowserQRCodeReader } from "@zxing/browser";
+
+import Markdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 export function QRCodeReader() {
   const [image, setImage] = useState("");
@@ -27,7 +31,24 @@ export function QRCodeReader() {
   }, [image]);
 
   return (
-    <div className="grid md:grid-cols-2 grid-cols-1 gap-4">
+    <div className="flex flex-col gap-4">
+      <ImageDropzone
+        onUpload={(file) => {
+          const imageUrl = URL.createObjectURL(file);
+          setImage(imageUrl);
+        }}
+      />
+
+      <canvas ref={canvasRef} className="hidden" />
+
+      <div className="p-4 text-sm text-center rounded-xl bg-muted w-full">
+        {result ? (
+          <Markdown remarkPlugins={[remarkGfm]}>{result}</Markdown>
+        ) : (
+          "Nenhum QRCode lido ainda."
+        )}
+      </div>
+
       <div className="flex flex-col justify-center items-center">
         {image ? (
           <div className="w-[200px] h-[200px]">
@@ -38,21 +59,6 @@ export function QRCodeReader() {
             <QrCode size={148} />
           </CardAnimatedBorder>
         )}
-      </div>
-
-      <div className="flex flex-col justify-center items-center gap-4">
-        <ImageDropzone
-          onUpload={(file) => {
-            const imageUrl = URL.createObjectURL(file);
-            setImage(imageUrl);
-          }}
-        />
-
-        <canvas ref={canvasRef} className="hidden" />
-
-        <div className="p-4 rounded-xl bg-muted w-full">
-          {result || "Nenhum QR Code lido ainda."}
-        </div>
       </div>
     </div>
   );

@@ -29,7 +29,7 @@ export default function RootLayout({
   return (
     <html lang="pt-Br" suppressHydrationWarning>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased font-mono`}
       >
         <ThemeProvider
           attribute="class"
@@ -40,7 +40,11 @@ export default function RootLayout({
           <TooltipProvider>
             {children}
             <CommandMenu />
-            <Toaster position="bottom-center" richColors />
+            <Toaster
+              position="bottom-center"
+              richColors
+              className="font-mono"
+            />
           </TooltipProvider>
         </ThemeProvider>
       </body>
