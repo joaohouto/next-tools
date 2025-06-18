@@ -40,7 +40,7 @@ export function CommandMenu() {
   );
 
   useHotkeys(
-    "ctrl+l",
+    "ctrl+shift+l",
     () => {
       if (theme === "light") {
         setTheme("dark");

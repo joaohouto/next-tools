@@ -4,20 +4,13 @@ import { CardAnimatedBorder } from "@/components/card-animated-border";
 import ImageDropzone from "@/components/image-dropzone";
 import { Spinner } from "@/components/spinner";
 import { ScanText } from "lucide-react";
-import { useState, useEffect, useRef, KeyboardEvent } from "react";
-import { useHotkeys } from "react-hotkeys-hook";
-import { toast } from "sonner";
+import { useState, useEffect } from "react";
 import Tesseract from "tesseract.js";
 
 export default function OcrPage() {
   const [image, setImage] = useState<string | null>(null);
   const [text, setText] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(false);
-
-  useHotkeys("ctrl+c", () => {
-    navigator.clipboard.writeText(text);
-    toast.info("Texto copiado!");
-  });
 
   useEffect(() => {
     if (image) {
