@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import useGyroscope from "react-hook-gyroscope";
+import { useDeviceOrientation } from "@/lib/use-device-orientation";
 
 interface BubbleLevelDisplayProps {
   axis: "x" | "y" | "both";
@@ -13,41 +13,29 @@ export function BubbleLevelDisplay({
   axis,
   description,
 }: BubbleLevelDisplayProps) {
-  // Use o hook useGyroscope para obter os dados do giroscópio e status
-  const {
-    orientation, // Contém beta, gamma, alpha, etc.
-    isSupported, // Indica se a API Device Orientation é suportada
-    isStarted, // Indica se a leitura do sensor foi iniciada
-    requestAccess, // Função para solicitar permissão (especialmente para iOS 13+)
-    hasPermission, // True se a permissão foi concedida ou não é necessária
-    error, // Qualquer erro que possa ocorrer (ex: permissão negada)
-  } = useGyroscope();
+  const { orientation, isSupported, isStarted, hasPermission, error } =
+    useDeviceOrientation();
 
   const [x, setX] = useState(0);
   const [y, setY] = useState(0);
 
   useEffect(() => {
-    // Tenta solicitar acesso automaticamente quando o componente monta
-    // E apenas se for suportado e a permissão ainda não foi dada
-    if (isSupported && !hasPermission && !error) {
-      requestAccess();
-    }
-  }, [isSupported, hasPermission, error, requestAccess]); // Dependências do useEffect
-
-  useEffect(() => {
     if (orientation) {
+      // Os valores de beta e gamma vêm diretamente do DeviceOrientationEvent
+      // O beta é a inclinação de frente/trás (pitch)
+      // O gamma é a inclinação de lado/lado (roll)
       const { beta, gamma } = orientation;
 
-      // Os valores de orientation já vêm do gyronorm (normalizados, em graus)
-      // então aplicamos diretamente e invertemos para a bolha
-      const newX = gamma * -1;
-      const newY = beta * -1;
+      // Invertemos os valores para que a bolha se mova intuitivamente
+      // (ex: inclinar para a direita move a bolha para a direita)
+      const newX = gamma !== null ? gamma * -1 : 0;
+      const newY = beta !== null ? beta * -1 : 0;
 
       if (axis === "x") {
         setX(newX);
-        setY(0);
+        setY(0); // Trava o Y para nível horizontal
       } else if (axis === "y") {
-        setX(0);
+        setX(0); // Trava o X para nível vertical
         setY(newY);
       } else {
         setX(newX);
@@ -62,10 +50,9 @@ export function BubbleLevelDisplay({
   const showXGuide = axis === "x" || axis === "both";
   const showYGuide = axis === "y" || axis === "both";
 
-  // Lógica para exibir mensagens de status
-  const showPermissionDenied =
-    !hasPermission && error && error.message.includes("Permission");
+  const showPermissionDenied = error && error.message.includes("Permission");
   const showNotSupported = !isSupported && !error;
+  const showAwaitingData = isSupported && !isStarted && hasPermission && !error;
   const showAwaitingPermission =
     isSupported && !isStarted && !hasPermission && !error;
 
@@ -89,12 +76,19 @@ export function BubbleLevelDisplay({
           <p className="text-center text-xs text-balance text-muted-foreground p-4">
             Aguardando permissão para acessar os sensores de movimento...
             <br />
-            (Pode ser necessário interagir para solicitar.)
+            (Pode ser necessário interagir com a página para solicitar.)
+          </p>
+        )}
+        {showAwaitingData && (
+          <p className="text-center text-xs text-balance text-muted-foreground p-4">
+            Permissão concedida. Aguardando dados do sensor...
+            <br />
+            (Mova seu dispositivo.)
           </p>
         )}
 
         {/* Só renderiza o nível se o sensor estiver ativo e tiver permissão */}
-        {isStarted && hasPermission && (
+        {isStarted && hasPermission && orientation && (
           <>
             {/* Guide Lines - Main Cross */}
             {showXGuide && (
@@ -124,8 +118,6 @@ export function BubbleLevelDisplay({
               {axis === "both" && (
                 <>
                   <div className="absolute size-12 border-[1px] border-foreground/40 rounded-full"></div>
-                  <div className="absolute size-24 border-[1px] border-foreground/40 rounded-full"></div>
-                  <div className="absolute size-36 border-[1px] border-foreground/40 rounded-full"></div>
                 </>
               )}
               {axis !== "both" && (
@@ -133,12 +125,18 @@ export function BubbleLevelDisplay({
                   {/* Shorter lines inside the circle for non-both modes */}
                   {showXGuide && (
                     <>
+                      <div className="absolute size-12 border-[1px] border-foreground/40 rounded-full"></div>
+                      <div className="absolute w-48  h-12 border-[1px] border-foreground/40 rounded-full"></div>
+
                       <div className="absolute w-24 h-[1px] bg-foreground/40 top-1/2 -translate-y-1/2"></div>
                       <div className="absolute w-[1px] h-24 bg-foreground/40 left-1/2 -translate-x-1/2"></div>
                     </>
                   )}
                   {showYGuide && (
                     <>
+                      <div className="absolute size-12 border-[1px] border-foreground/40 rounded-full"></div>
+                      <div className="absolute w-12  h-48 border-[1px] border-foreground/40 rounded-full"></div>
+
                       <div className="absolute w-24 h-[1px] bg-foreground/40 top-1/2 -translate-y-1/2 rotate-90"></div>
                       <div className="absolute w-[1px] h-24 bg-foreground/40 left-1/2 -translate-x-1/2 rotate-90"></div>
                     </>
