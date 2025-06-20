@@ -19,7 +19,7 @@ export function BubbleLevelDisplay({
   const [permissionDenied, setPermissionDenied] = useState(false);
 
   useEffect(() => {
-    let gnInstance = null;
+    let gnInstance: GyroNorm | null = null;
 
     const initGyroNorm = async () => {
       gnInstance = new GyroNorm();
@@ -30,7 +30,7 @@ export function BubbleLevelDisplay({
           gravityNormalized: true, // Retorna os ângulos de orientação normalizados
         })
         .then(() => {
-          gnInstance?.start((data: gn.Data) => {
+          gnInstance?.start((data: any) => {
             // 'data' contém beta e gamma normalizados entre -180 e 180
             const { do: deviceOrientation } = data;
             const { beta, gamma } = deviceOrientation;
@@ -70,7 +70,7 @@ export function BubbleLevelDisplay({
 
     return () => {
       if (gnInstance) {
-        gnInstance.stop();
+        gnInstance.stopLogging();
       }
     };
   }, [axis]);
