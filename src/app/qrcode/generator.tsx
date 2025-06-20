@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/select";
 import { ColorPicker } from "@/components/color-picker";
 import { CardAnimatedBorder } from "@/components/card-animated-border";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 export function QRCodeGenerator() {
   const [text, setText] = useState("");
@@ -31,6 +32,7 @@ export function QRCodeGenerator() {
   });
 
   const imageRef = useRef(null);
+  const isMobile = useIsMobile();
 
   return (
     <div className="grid md:grid-cols-2 grid-cols-1 content-center gap-4">
@@ -77,7 +79,7 @@ export function QRCodeGenerator() {
           value={text}
           onChange={(e) => setText(e.target.value)}
           placeholder="Seu link, texto, etc."
-          autoFocus
+          autoFocus={!isMobile}
         />
       </div>
 

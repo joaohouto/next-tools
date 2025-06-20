@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { GyroNorm } from "gyronorm";
+import useGyroscope from "react-hook-gyroscope";
 
 interface BubbleLevelDisplayProps {
   axis: "x" | "y" | "both";
@@ -13,67 +13,48 @@ export function BubbleLevelDisplay({
   axis,
   description,
 }: BubbleLevelDisplayProps) {
+  // Use o hook useGyroscope para obter os dados do giroscópio e status
+  const {
+    orientation, // Contém beta, gamma, alpha, etc.
+    isSupported, // Indica se a API Device Orientation é suportada
+    isStarted, // Indica se a leitura do sensor foi iniciada
+    requestAccess, // Função para solicitar permissão (especialmente para iOS 13+)
+    hasPermission, // True se a permissão foi concedida ou não é necessária
+    error, // Qualquer erro que possa ocorrer (ex: permissão negada)
+  } = useGyroscope();
+
   const [x, setX] = useState(0);
   const [y, setY] = useState(0);
-  const [hasDeviceMotion, setHasDeviceMotion] = useState(false);
-  const [permissionDenied, setPermissionDenied] = useState(false);
 
   useEffect(() => {
-    let gnInstance: GyroNorm | null = null;
+    // Tenta solicitar acesso automaticamente quando o componente monta
+    // E apenas se for suportado e a permissão ainda não foi dada
+    if (isSupported && !hasPermission && !error) {
+      requestAccess();
+    }
+  }, [isSupported, hasPermission, error, requestAccess]); // Dependências do useEffect
 
-    const initGyroNorm = async () => {
-      gnInstance = new GyroNorm();
+  useEffect(() => {
+    if (orientation) {
+      const { beta, gamma } = orientation;
 
-      // Configure o GyroNorm
-      gnInstance
-        .init({
-          gravityNormalized: true, // Retorna os ângulos de orientação normalizados
-        })
-        .then(() => {
-          gnInstance?.start((data: any) => {
-            // 'data' contém beta e gamma normalizados entre -180 e 180
-            const { do: deviceOrientation } = data;
-            const { beta, gamma } = deviceOrientation;
+      // Os valores de orientation já vêm do gyronorm (normalizados, em graus)
+      // então aplicamos diretamente e invertemos para a bolha
+      const newX = gamma * -1;
+      const newY = beta * -1;
 
-            if (beta !== null && gamma !== null) {
-              // Os valores do gyronorm já são em graus e normalizados,
-              // então aplicamos diretamente e invertemos para a bolha
-              const newX = gamma * -1;
-              const newY = beta * -1;
-
-              if (axis === "x") {
-                setX(newX);
-                setY(0);
-              } else if (axis === "y") {
-                setX(0);
-                setY(newY);
-              } else {
-                setX(newX);
-                setY(newY);
-              }
-              setHasDeviceMotion(true);
-              setPermissionDenied(false);
-            }
-          });
-        })
-        .catch((e) => {
-          console.error("GyroNorm initialization error:", e);
-          if (e.message.includes("Permission")) {
-            setPermissionDenied(true);
-          } else {
-            setHasDeviceMotion(false); // API não suportada ou outro erro
-          }
-        });
-    };
-
-    initGyroNorm();
-
-    return () => {
-      if (gnInstance) {
-        gnInstance.stopLogging();
+      if (axis === "x") {
+        setX(newX);
+        setY(0);
+      } else if (axis === "y") {
+        setX(0);
+        setY(newY);
+      } else {
+        setX(newX);
+        setY(newY);
       }
-    };
-  }, [axis]);
+    }
+  }, [orientation, axis]); // Reage a mudanças na orientação ou no eixo
 
   const bubbleTransformX = axis === "y" ? 0 : x / 2;
   const bubbleTransformY = axis === "x" ? 0 : y / 2;
@@ -81,10 +62,17 @@ export function BubbleLevelDisplay({
   const showXGuide = axis === "x" || axis === "both";
   const showYGuide = axis === "y" || axis === "both";
 
+  // Lógica para exibir mensagens de status
+  const showPermissionDenied =
+    !hasPermission && error && error.message.includes("Permission");
+  const showNotSupported = !isSupported && !error;
+  const showAwaitingPermission =
+    isSupported && !isStarted && !hasPermission && !error;
+
   return (
     <Card className="w-full md:w-[320px] h-[320px] flex flex-col mx-auto shadow-lg rounded-2xl">
       <CardContent className="relative flex flex-grow items-center justify-center rounded-lg overflow-hidden p-0">
-        {!hasDeviceMotion && permissionDenied && (
+        {showPermissionDenied && (
           <p className="text-center text-sm text-balance text-muted-foreground p-4">
             Permissão para acessar os sensores de movimento negada.
             <br />
@@ -92,14 +80,21 @@ export function BubbleLevelDisplay({
             acesso.)
           </p>
         )}
-        {!hasDeviceMotion && !permissionDenied && (
-          <p className="text-center text-xs text-balance text-muted-foreground p-4">
-            Iniciando GyroNorm...
-            <br />
-            (Aguardando permissão ou API não suportada.)
+        {showNotSupported && (
+          <p className="text-center text-sm text-balance text-muted-foreground p-4">
+            A API de Orientação de Dispositivo não é suportada neste navegador.
           </p>
         )}
-        {hasDeviceMotion && (
+        {showAwaitingPermission && (
+          <p className="text-center text-xs text-balance text-muted-foreground p-4">
+            Aguardando permissão para acessar os sensores de movimento...
+            <br />
+            (Pode ser necessário interagir para solicitar.)
+          </p>
+        )}
+
+        {/* Só renderiza o nível se o sensor estiver ativo e tiver permissão */}
+        {isStarted && hasPermission && (
           <>
             {/* Guide Lines - Main Cross */}
             {showXGuide && (

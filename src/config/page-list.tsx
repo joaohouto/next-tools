@@ -1,17 +1,13 @@
 import {
   Atom,
-  CloudDownload,
   Github,
-  Image,
-  Key,
-  Link,
+  Lock,
   NotepadText,
   QrCode,
   Ruler,
   ScanText,
   SquareTerminal,
   Timer,
-  Workflow,
 } from "lucide-react";
 
 export const PAGE_LIST = [
@@ -27,18 +23,12 @@ export const PAGE_LIST = [
   },
 
   {
-    title: "Downloader de mídia",
-    path: "https://cobalt.tools/",
-    icon: <CloudDownload />,
+    title: "Gerador de Senha",
+    path: "/password",
+    icon: <Lock />,
   },
 
   {
-    title: "Gerador de Senha",
-    path: "/password",
-    icon: <Key />,
-  },
-
-   {
     title: "Nível Bolha",
     path: "/bubble-level",
     icon: <Ruler />,
@@ -61,11 +51,7 @@ export const PAGE_LIST = [
     path: "/icon",
     icon: <Atom />,
   },
-  {
-    title: "Diagramas Mermaid",
-    path: "/mermaid",
-    icon: <Workflow />,
-  },
+
   {
     title: "Teleprompter",
     path: "/teleprompter",
