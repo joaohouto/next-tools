@@ -48,11 +48,13 @@
     "dom-to-svg": "^0.12.2",
     "embla-carousel-react": "^8.5.2",
     "framer-motion": "^12.4.1",
+    "gyronorm": "^2.0.6",
     "html-to-image": "^1.11.11",
     "input-otp": "^1.4.2",
     "lucide-react": "^0.474.0",
     "mermaid": "^11.4.1",
     "next": "15.1.6",
+    "next-pwa": "^5.6.0",
     "next-themes": "^0.4.4",
     "openai": "^4.83.0",
     "qrcode.react": "^4.2.0",
@@ -75,6 +77,7 @@
     "zod": "^3.24.1"
   },
   "devDependencies": {
+    "@types/gyronorm": "^2.0.4",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",

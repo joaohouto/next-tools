@@ -7,6 +7,7 @@ import {
   Link,
   NotepadText,
   QrCode,
+  Ruler,
   ScanText,
   SquareTerminal,
   Timer,
@@ -37,11 +38,18 @@ export const PAGE_LIST = [
     icon: <Key />,
   },
 
+   {
+    title: "Nível Bolha",
+    path: "/bubble-level",
+    icon: <Ruler />,
+  },
+
   {
     title: "Relógio Pomodoro",
     path: "/pomodoro",
     icon: <Timer />,
   },
+
   {
     title: "Folha de Redação",
     path: "/essay",
