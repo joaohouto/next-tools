@@ -1,5 +1,6 @@
 import {
   Atom,
+  FileArchive,
   Github,
   Lock,
   NotepadText,
@@ -8,6 +9,7 @@ import {
   ScanText,
   SquareTerminal,
   Timer,
+  Smile,
 } from "lucide-react";
 
 export const PAGE_LIST = [
@@ -21,11 +23,22 @@ export const PAGE_LIST = [
     path: "/qrcode",
     icon: <QrCode />,
   },
+  {
+    title: "PDF",
+    path: "/pdf",
+    icon: <FileArchive />,
+  },
 
   {
     title: "Gerador de Senha",
     path: "/password",
     icon: <Lock />,
+  },
+
+  {
+    title: "Emoji",
+    path: "/emoji",
+    icon: <Smile />,
   },
 
   {
