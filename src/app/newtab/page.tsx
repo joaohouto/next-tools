@@ -1,11 +1,9 @@
 "use client";
 
-import useSWR from "swr";
 import { useEffect, useState, useRef } from "react";
 import { SearchIcon, UploadIcon } from "lucide-react";
 
 import { DailySaying } from "./sayings";
-import { WeatherWidget } from "./weather-widget";
 
 function Greeting() {
   const date = new Date();
@@ -61,9 +59,7 @@ export default function Page() {
         backgroundImage: `url(https://images.unsplash.com/photo-1707430393809-784967fe6fee?w=2000)`,
       }}
     >
-      <header className="w-full flex gap-2 items-center justify-end">
-        <WeatherWidget />
-      </header>
+      <header className="w-full flex gap-2 items-center justify-end"></header>
 
       <section className="w-full md:w-[600px] flex flex-col items-center justify-center gap-4">
         <h1 className="text-2xl font-semibold">

@@ -3,7 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { useDebounce } from "@/lib/debounce";
+import { useDebounce } from "@/hooks/use-debounce";
 import { exportEssay } from "@/lib/export-image";
 import { Download, Minus, Moon, Plus, Sun } from "lucide-react";
 import { useTheme } from "next-themes";

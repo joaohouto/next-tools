@@ -1,6 +1,3 @@
-"use client";
-
-import { AlertCircle } from "lucide-react";
 import { BubbleLevelDisplay } from "./bubble-level-display";
 
 export default function HomePage() {
@@ -16,6 +13,10 @@ export default function HomePage() {
         {/* Nível para Alinhamento Vertical (Celular de lado, borda mais curta na mesa) */}
         <BubbleLevelDisplay axis="y" />
       </div>
+
+      <span className="text-muted-foreground text-xs text-center text-balance">
+        É necessário que seu dispositivo tenha giroscópio.
+      </span>
     </div>
   );
 }
