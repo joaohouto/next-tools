@@ -5,7 +5,7 @@ import FileDropzone from "./file-dropzone";
 export default function ImageDropzone({
   onUpload,
 }: {
-  onUpload: (file: File) => void;
+  onUpload: (files: File[]) => void;
 }) {
   return (
     <FileDropzone

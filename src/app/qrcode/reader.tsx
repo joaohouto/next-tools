@@ -33,9 +33,11 @@ export function QRCodeReader() {
   return (
     <div className="flex flex-col gap-4">
       <ImageDropzone
-        onUpload={(file) => {
-          const imageUrl = URL.createObjectURL(file);
-          setImage(imageUrl);
+        onUpload={(files) => {
+          if (files.length > 0) {
+            const imageUrl = URL.createObjectURL(files[0]);
+            setImage(imageUrl);
+          }
         }}
       />
 

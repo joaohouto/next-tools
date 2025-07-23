@@ -29,9 +29,11 @@ export default function OcrPage() {
     <div className="p-8 w-full min-h-screen">
       <div className="w-full md:max-w-[680px] mx-auto flex flex-col content-center gap-4">
         <ImageDropzone
-          onUpload={(file) => {
-            const imageUrl = URL.createObjectURL(file);
-            setImage(imageUrl);
+          onUpload={(files) => {
+            if (files.length > 0) {
+              const imageUrl = URL.createObjectURL(files[0]);
+              setImage(imageUrl);
+            }
           }}
         />
 

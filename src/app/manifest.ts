@@ -1,6 +1,5 @@
-import type { MetadataRoute } from "next";
-
-export default function manifest(): MetadataRoute.Manifest {
+/** @type {import('next').MetadataRoute} */
+export default function manifest() {
   return {
     name: "tools",
     short_name: "tools",
