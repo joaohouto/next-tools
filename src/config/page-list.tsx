@@ -23,11 +23,6 @@ export const PAGE_LIST = [
     path: "/qrcode",
     icon: <QrCode />,
   },
-  {
-    title: "PDF",
-    path: "/pdf",
-    icon: <FileArchive />,
-  },
 
   {
     title: "Gerador de Senha",
