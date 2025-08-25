@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 
 import { useHotkeys } from "react-hotkeys-hook";
 
-import { Command } from "lucide-react";
+import { Circle, Command } from "lucide-react";
 
 import {
   CommandDialog,
@@ -15,6 +15,7 @@ import {
   CommandItem,
   CommandList,
   CommandSeparator,
+  CommandShortcut,
 } from "@/components/ui/command";
 import { useTheme } from "next-themes";
 import { PAGE_LIST } from "@/config/page-list";
@@ -51,10 +52,18 @@ export function CommandMenu() {
     hotKeysOptions
   );
 
+  useHotkeys(
+    "ctrl+shift+s",
+    () => {
+      setTheme("system");
+    },
+    hotKeysOptions
+  );
+
   const COMMAND_LIST = [
     {
-      title: "Alternar tema da interface",
-      shortcut: "L",
+      title: "Alternar tema",
+      shortcut: "CTRL+SHIFT+L",
       onSelect: () => {
         if (theme === "light") {
           setTheme("dark");
@@ -64,7 +73,8 @@ export function CommandMenu() {
       },
     },
     {
-      title: "Aplicar tema de cores do dispositivo",
+      title: "Usar tema do dispositivo",
+      shortcut: "CTRL+SHIFT+S",
       onSelect: () => {
         setTheme("system");
       },
@@ -94,8 +104,10 @@ export function CommandMenu() {
         <CommandGroup heading="Comandos">
           {COMMAND_LIST.map((command) => (
             <CommandItem key={command.title} onSelect={command.onSelect}>
-              <Command />
+              <Circle />
               <span>{command.title}</span>
+
+              <CommandShortcut>{command.shortcut}</CommandShortcut>
             </CommandItem>
           ))}
         </CommandGroup>

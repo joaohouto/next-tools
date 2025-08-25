@@ -1,5 +1,6 @@
 import {
   Atom,
+  Crop,
   FileArchive,
   Github,
   Lock,
@@ -64,6 +65,12 @@ export const PAGE_LIST = [
     title: "Teleprompter",
     path: "/teleprompter",
     icon: <SquareTerminal />,
+  },
+
+  {
+    title: "Editor de Screenshot",
+    path: "/screenshot",
+    icon: <Crop />,
   },
 
   {
