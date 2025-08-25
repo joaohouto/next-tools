@@ -16,6 +16,7 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
+import { GithubIcon } from "lucide-react";
 
 const itemVariants = {
   hidden: { y: 20, opacity: 0, filter: "blur(6px)" },
@@ -52,7 +53,7 @@ export default function Home() {
       </motion.div>
 
       <motion.h1 variants={itemVariants} custom={2} className="mb-8">
-        <BadgeRotateBorder>joaocouto.com</BadgeRotateBorder>
+        <BadgeRotateBorder>tools</BadgeRotateBorder>
       </motion.h1>
 
       <motion.div variants={itemVariants} custom={3} className="w-full">
@@ -74,6 +75,14 @@ export default function Home() {
             <CommandEmpty>Nenhum resultado</CommandEmpty>
           </CommandList>
         </Command>
+
+        <a
+          className="text-xs text-muted-foreground mt-8 flex items-center justify-center gap-2"
+          href="https://github.com/joaohouto/next-tools"
+        >
+          <GithubIcon className="size-4" />
+          joaohouto/next-tools
+        </a>
       </motion.div>
     </motion.div>
   );

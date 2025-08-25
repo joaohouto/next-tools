@@ -1,8 +1,6 @@
 import {
   Atom,
   Crop,
-  FileArchive,
-  Github,
   Lock,
   NotepadText,
   QrCode,
@@ -13,7 +11,7 @@ import {
   Smile,
 } from "lucide-react";
 
-export const PAGE_LIST = [
+export const UNORDERED_LIST = [
   {
     title: "OCR",
     path: "/ocr",
@@ -32,7 +30,7 @@ export const PAGE_LIST = [
   },
 
   {
-    title: "Emoji",
+    title: "Seletor de Emoji",
     path: "/emoji",
     icon: <Smile />,
   },
@@ -66,16 +64,8 @@ export const PAGE_LIST = [
     path: "/teleprompter",
     icon: <SquareTerminal />,
   },
-
-  {
-    title: "Editor de Screenshot",
-    path: "/screenshot",
-    icon: <Crop />,
-  },
-
-  {
-    title: "GitHub",
-    path: "https://github.com/joaohouto/next-tools",
-    icon: <Github />,
-  },
 ];
+
+export const PAGE_LIST = UNORDERED_LIST.sort((a, b) =>
+  a.title.localeCompare(b.title)
+);
