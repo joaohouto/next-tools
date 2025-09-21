@@ -92,6 +92,12 @@ export default function Page() {
     Notification.requestPermission();
   }, []);
 
+  useEffect(() => {
+    document.title = `${getMinutes(secondsLeft)}:${getSeconds(
+      secondsLeft
+    )} - Pomodoro`;
+  }, [secondsLeft]);
+
   return (
     <div className="max-w-[460px] min-h-screen mx-auto p-8 gap-4 flex flex-col items-center justify-center">
       <div>

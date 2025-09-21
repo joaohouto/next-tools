@@ -9,6 +9,7 @@ import {
   SquareTerminal,
   Timer,
   Smile,
+  Camera,
 } from "lucide-react";
 
 export const UNORDERED_LIST = [
@@ -30,7 +31,7 @@ export const UNORDERED_LIST = [
   },
 
   {
-    title: "Seletor de Emoji",
+    title: "Emoji",
     path: "/emoji",
     icon: <Smile />,
   },
@@ -63,6 +64,11 @@ export const UNORDERED_LIST = [
     title: "Teleprompter",
     path: "/teleprompter",
     icon: <SquareTerminal />,
+  },
+  {
+    title: "Webcam",
+    path: "/webcam",
+    icon: <Camera />,
   },
 ];
 
