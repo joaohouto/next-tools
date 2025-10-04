@@ -2,17 +2,20 @@
 
 import { useState, useRef, useEffect } from "react";
 import { UploadIcon } from "lucide-react";
+import { Spinner } from "./spinner";
 
 export default function FileDropzone({
   onUpload,
   accept,
   label,
   multiple,
+  isLoading = false,
 }: {
   onUpload: (files: File[]) => void;
   accept?: string;
   label?: string;
   multiple?: boolean;
+  isLoading?: boolean;
 }) {
   const [highlight, setHighlight] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -92,8 +95,13 @@ export default function FileDropzone({
         highlight ? "border-blue-400 bg-blue-400/20" : "border-foreground/20"
       }`}
     >
-      <UploadIcon size={32} className="mb-2 text-muted-foreground" />
-      <p className="text-muted-foreground text-sm text-center select-none">
+      {isLoading ? (
+        <Spinner />
+      ) : (
+        <UploadIcon size={24} className="text-muted-foreground" />
+      )}
+
+      <p className="text-muted-foreground text-sm text-center select-none mt-2">
         {label || "Arraste, clique ou cole (Ctrl+V) um arquivo"}
       </p>
       <input
@@ -103,6 +111,7 @@ export default function FileDropzone({
         onChange={handleFileChange}
         className="hidden"
         multiple={multiple}
+        disabled={isLoading}
       />
     </div>
   );

@@ -1,73 +1,16 @@
-"use client";
+import EmojiSearch from "./client";
 
-import { useEffect, useState } from "react";
-import { Button } from "@/components/ui/button";
-import emojiList from "./emoji-list.json";
-import { toast } from "sonner";
-import { Input } from "@/components/ui/input";
-import { Search } from "lucide-react";
+import { PAGE_LIST } from "@/config/page-list";
 
-export default function EmojiSearch() {
-  const [searchTerm, setSearchTerm] = useState("");
-  const [filteredEmojis, setFilteredEmojis] = useState(emojiList);
+const pageMeta = PAGE_LIST.filter((p) => p.path === "/emoji")[0];
 
-  useEffect(() => {
-    const lowerCaseSearchTerm = searchTerm.toLowerCase();
-    if (!lowerCaseSearchTerm) {
-      setFilteredEmojis(emojiList);
-      return;
-    }
+export const metadata = {
+  title: pageMeta.title,
+  openGraph: {
+    images: [`/api/og?title=${pageMeta.title}`],
+  },
+};
 
-    setFilteredEmojis(
-      emojiList.filter(
-        (emoji: any) =>
-          emoji.name.toLowerCase().includes(lowerCaseSearchTerm) ||
-          (emoji.keywords &&
-            emoji.keywords.some((keyword: any) =>
-              keyword.toLowerCase().includes(lowerCaseSearchTerm)
-            ))
-      )
-    );
-  }, [searchTerm]);
-
-  return (
-    <div className="px-4 py-8 max-w-xl mx-auto">
-      <div className="relative">
-        <Search className="absolute text-muted-foreground left-2.5 top-2.5 size-4" />
-
-        <Input
-          type="text"
-          placeholder="Pesquisar..."
-          className="mb-8 pl-10"
-          autoFocus
-          onChange={(e) => setSearchTerm(e.target.value)}
-        />
-      </div>
-
-      <div className="flex items-center justify-center flex-wrap gap-2">
-        {filteredEmojis.map((emoji) => (
-          <Button
-            key={emoji.name}
-            className="text-3xl text-center size-16"
-            onClick={() => {
-              navigator.clipboard.writeText(emoji.emoji);
-
-              toast.success(`${emoji.emoji} copiado!`);
-            }}
-            size="icon"
-            variant="ghost"
-            title={emoji.name}
-          >
-            {emoji.emoji}
-          </Button>
-        ))}
-
-        {filteredEmojis.length === 0 && (
-          <span className="text-muted-foreground text-sm">
-            Nenhum emoji encontrado!
-          </span>
-        )}
-      </div>
-    </div>
-  );
+export default function Page() {
+  return <EmojiSearch />;
 }

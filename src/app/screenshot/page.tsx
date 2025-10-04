@@ -2,7 +2,7 @@ import Client from "./client";
 
 import { PAGE_LIST } from "@/config/page-list";
 
-const pageMeta = PAGE_LIST.filter((p) => p.path === "/webcam")[0];
+const pageMeta = PAGE_LIST.filter((p) => p.path === "/screenshot")[0];
 
 export const metadata = {
   title: pageMeta.title,

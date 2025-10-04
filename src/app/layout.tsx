@@ -18,8 +18,14 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata = {
-  title: "tools",
+  title: {
+    default: "tools",
+    template: `%s | tools`,
+  },
   description: "Useful tools.",
+  openGraph: {
+    images: [`/og?title=tools`],
+  },
 };
 
 export default function RootLayout({

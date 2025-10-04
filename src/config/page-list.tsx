@@ -1,6 +1,5 @@
 import {
   Atom,
-  Crop,
   Lock,
   NotepadText,
   QrCode,
@@ -10,11 +9,12 @@ import {
   Timer,
   Smile,
   Camera,
+  Crop,
 } from "lucide-react";
 
 export const UNORDERED_LIST = [
   {
-    title: "OCR",
+    title: "Reconhecer Texto (OCR)",
     path: "/ocr",
     icon: <ScanText />,
   },
@@ -43,7 +43,7 @@ export const UNORDERED_LIST = [
   },
 
   {
-    title: "Relógio Pomodoro",
+    title: "Pomodoro",
     path: "/pomodoro",
     icon: <Timer />,
   },
@@ -69,6 +69,11 @@ export const UNORDERED_LIST = [
     title: "Webcam",
     path: "/webcam",
     icon: <Camera />,
+  },
+  {
+    title: "Screenshot",
+    path: "/screenshot",
+    icon: <Crop />,
   },
 ];
 

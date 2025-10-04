@@ -81,7 +81,7 @@ export default function Home() {
           href="https://github.com/joaohouto/next-tools"
         >
           <GithubIcon className="size-4" />
-          joaohouto/next-tools
+          /joaohouto/next-tools
         </a>
       </motion.div>
     </motion.div>

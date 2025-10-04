@@ -43,7 +43,7 @@ export function QRCodeReader() {
 
       <canvas ref={canvasRef} className="hidden" />
 
-      <div className="p-4 text-sm text-center rounded-xl bg-muted w-full">
+      <div className="p-4 text-sm text-center rounded-xl bg-muted w-full break-words">
         {result ? (
           <Markdown remarkPlugins={[remarkGfm]}>{result}</Markdown>
         ) : (

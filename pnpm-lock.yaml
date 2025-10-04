@@ -132,8 +132,8 @@ importers:
         specifier: ^1.4.2
         version: 1.4.2(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
       konva:
-        specifier: ^9.3.22
-        version: 9.3.22
+        specifier: ^10.0.2
+        version: 10.0.2
       lucide-react:
         specifier: ^0.474.0
         version: 0.474.0(react@19.1.0)
@@ -182,9 +182,12 @@ importers:
       react-hotkeys-hook:
         specifier: ^4.6.1
         version: 4.6.2(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
+      react-image-crop:
+        specifier: ^11.0.10
+        version: 11.0.10(react@19.1.0)
       react-konva:
         specifier: ^19.0.7
-        version: 19.0.7(@types/react@19.1.2)(konva@9.3.22)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
+        version: 19.0.7(@types/react@19.1.2)(konva@10.0.2)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
       react-markdown:
         specifier: ^10.1.0
         version: 10.1.0(@types/react@19.1.2)(react@19.1.0)
@@ -3123,8 +3126,8 @@ packages:
     resolution: {integrity: sha512-p/nXbhSEcu3pZRdkW1OfJhpsVtW1gd4Wa1fnQc9YLiTfAjn0312eMKimbdIQzuZl9aa9xUGaRlP9T/CJE/ditQ==}
     engines: {node: '>=0.10.0'}
 
-  konva@9.3.22:
-    resolution: {integrity: sha512-yQI5d1bmELlD/fowuyfOp9ff+oamg26WOCkyqUyc+nczD/lhRa3EvD2MZOoc4c1293TAubW9n34fSQLgSeEgSw==}
+  konva@10.0.2:
+    resolution: {integrity: sha512-NrZED6YG5BX5h3Xu8EZgLqhQ/+ZhxANYXmlIhMOfpBf+0ToExcdwE+Y46LyJOO/JR7FVeR3YTqon3eirnuo44A==}
 
   leven@3.1.0:
     resolution: {integrity: sha512-qsda+H8jTaUaN/x5vzW2rzc+8Rw4TAQ/4KjB46IwK5VH+IlVeeeje/EoZRpiXvIqjFgK84QffqPztGI3VBLG1A==}
@@ -3721,6 +3724,11 @@ packages:
     peerDependencies:
       react: '>=16.8.1'
       react-dom: '>=16.8.1'
+
+  react-image-crop@11.0.10:
+    resolution: {integrity: sha512-+5FfDXUgYLLqBh1Y/uQhIycpHCbXkI50a+nbfkB1C0xXXUTwkisHDo2QCB1SQJyHCqIuia4FeyReqXuMDKWQTQ==}
+    peerDependencies:
+      react: '>=16.13.1'
 
   react-is@16.13.1:
     resolution: {integrity: sha512-24e6ynE2H+OKt4kqsOvNd8kBpV65zoxbA4BVsEOB3ARVWQki/DHzaUoC5KuON/BiccDaCCTZBuOcfZs70kR8bQ==}
@@ -7628,7 +7636,7 @@ snapshots:
 
   jsonpointer@5.0.1: {}
 
-  konva@9.3.22: {}
+  konva@10.0.2: {}
 
   leven@3.1.0: {}
 
@@ -8410,17 +8418,21 @@ snapshots:
       react: 19.1.0
       react-dom: 19.1.0(react@19.1.0)
 
+  react-image-crop@11.0.10(react@19.1.0):
+    dependencies:
+      react: 19.1.0
+
   react-is@16.13.1: {}
 
   react-is@17.0.2: {}
 
   react-is@18.3.1: {}
 
-  react-konva@19.0.7(@types/react@19.1.2)(konva@9.3.22)(react-dom@19.1.0(react@19.1.0))(react@19.1.0):
+  react-konva@19.0.7(@types/react@19.1.2)(konva@10.0.2)(react-dom@19.1.0(react@19.1.0))(react@19.1.0):
     dependencies:
       '@types/react-reconciler': 0.32.0(@types/react@19.1.2)
       its-fine: 2.0.0(@types/react@19.1.2)(react@19.1.0)
-      konva: 9.3.22
+      konva: 10.0.2
       react: 19.1.0
       react-dom: 19.1.0(react@19.1.0)
       react-reconciler: 0.32.0(react@19.1.0)
