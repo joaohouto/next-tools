@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import Tesseract from "tesseract.js";
 
+/// curl -X POST -F "image=@./image.png" http://localhost:3000/api/ocr
+
 export async function POST(request: Request) {
   const formData = await request.formData();
   const file = formData.get("image") as File;

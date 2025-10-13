@@ -10,6 +10,7 @@ import {
   Smile,
   Camera,
   Crop,
+  BookImage,
 } from "lucide-react";
 
 export const UNORDERED_LIST = [
@@ -71,9 +72,9 @@ export const UNORDERED_LIST = [
     icon: <Camera />,
   },
   {
-    title: "Screenshot",
-    path: "/screenshot",
-    icon: <Crop />,
+    title: "Remover Cor",
+    path: "/color-remover",
+    icon: <BookImage />,
   },
 ];
 
