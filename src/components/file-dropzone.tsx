@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { UploadIcon } from "lucide-react";
 import { Spinner } from "./spinner";
+import { cn } from "@/lib/utils";
 
 export default function FileDropzone({
   onUpload,
@@ -10,12 +11,14 @@ export default function FileDropzone({
   label,
   multiple,
   isLoading = false,
+  className,
 }: {
   onUpload: (files: File[]) => void;
   accept?: string;
   label?: string;
   multiple?: boolean;
   isLoading?: boolean;
+  className?: string;
 }) {
   const [highlight, setHighlight] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -91,9 +94,12 @@ export default function FileDropzone({
       onDragLeave={() => setHighlight(false)}
       onDrop={handleDrop}
       onClick={handleClick}
-      className={`w-full h-48 flex flex-col items-center justify-center p-4 border-2 border-dashed rounded-xl cursor-pointer transition-all ${
-        highlight ? "border-blue-400 bg-blue-400/20" : "border-foreground/20"
-      }`}
+      className={cn(
+        `w-full h-48 flex flex-col items-center justify-center p-4 border-2 border-dashed rounded-xl cursor-pointer transition-all ${
+          highlight ? "border-blue-400 bg-blue-400/20" : "border-foreground/20"
+        }`,
+        className
+      )}
     >
       {isLoading ? (
         <Spinner />

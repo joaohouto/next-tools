@@ -1,5 +1,3 @@
-// @ts-nocheck
-
 "use client";
 
 import React, { useState, useRef } from "react";
@@ -12,51 +10,62 @@ import { Input } from "@/components/ui/input";
 import FileDropzone from "@/components/file-dropzone";
 
 export default function ColorRemover() {
-  const [originalImage, setOriginalImage] = useState(null);
-  const [processedImage, setProcessedImage] = useState(null);
+  const [originalImage, setOriginalImage] = useState<HTMLImageElement | null>(
+    null
+  );
+  const [processedImage, setProcessedImage] = useState<string | null>(null);
   const [threshold, setThreshold] = useState(30);
   const [targetColor, setTargetColor] = useState("#ffffff");
   const [isProcessing, setIsProcessing] = useState(false);
   const [isPickingColor, setIsPickingColor] = useState(false);
   const [zoomPosition, setZoomPosition] = useState({ x: 0, y: 0, show: false });
-  const processedImageRef = useRef(null);
+  const processedImageRef = useRef<HTMLDivElement | null>(null);
 
-  const handleFilesUpload = (files) => {
-    const file = files[0];
-    if (file) {
+  const handleFilesUpload = (files: File[]) => {
+    if (files && files.length > 0) {
+      const file = files[0];
       processFile(file);
     }
   };
 
-  const processFile = (file) => {
+  const processFile = (file: File) => {
     const reader = new FileReader();
     reader.onload = (e) => {
-      const img = new Image();
-      img.onload = () => {
-        setOriginalImage(img);
-        removeBackground(img, threshold, targetColor);
-      };
-      img.src = e.target.result;
+      const result = e.target?.result;
+      if (typeof result === "string") {
+        const img = new Image();
+        img.onload = () => {
+          setOriginalImage(img);
+          removeBackground(img, threshold, targetColor);
+        };
+        img.src = result;
+      }
     };
     reader.readAsDataURL(file);
   };
 
-  const removeBackground = (img, thresholdValue, color) => {
+  const removeBackground = (
+    img: HTMLImageElement,
+    thresholdValue: number,
+    color: string
+  ) => {
     setIsProcessing(true);
 
     setTimeout(() => {
       const canvas = document.createElement("canvas");
       const ctx = canvas.getContext("2d");
+      if (!ctx) {
+        setIsProcessing(false);
+        return;
+      }
 
       canvas.width = img.width;
       canvas.height = img.height;
-
       ctx.drawImage(img, 0, 0);
 
       const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
       const data = imageData.data;
 
-      // Converte a cor hex para RGB
       const targetR = parseInt(color.slice(1, 3), 16);
       const targetG = parseInt(color.slice(3, 5), 16);
       const targetB = parseInt(color.slice(5, 7), 16);
@@ -66,35 +75,32 @@ export default function ColorRemover() {
         const g = data[i + 1];
         const b = data[i + 2];
 
-        // Calcula a diferença entre o pixel atual e a cor alvo
         const diff = Math.sqrt(
           Math.pow(r - targetR, 2) +
             Math.pow(g - targetG, 2) +
             Math.pow(b - targetB, 2)
         );
 
-        // Se a diferença for menor que o threshold, torna transparente
         if (diff < thresholdValue) {
           data[i + 3] = 0;
         }
       }
 
       ctx.putImageData(imageData, 0, 0);
-
       setProcessedImage(canvas.toDataURL("image/png"));
       setIsProcessing(false);
     }, 100);
   };
 
-  const handleThresholdChange = (e) => {
-    const newThreshold = parseInt(e.target.value);
+  const handleThresholdChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newThreshold = parseInt(e.target.value, 10);
     setThreshold(newThreshold);
     if (originalImage) {
       removeBackground(originalImage, newThreshold, targetColor);
     }
   };
 
-  const handleColorChange = (e) => {
+  const handleColorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newColor = e.target.value;
     setTargetColor(newColor);
     if (originalImage) {
@@ -102,16 +108,18 @@ export default function ColorRemover() {
     }
   };
 
-  const handleImageClick = (e) => {
+  const handleImageClick = (e: React.MouseEvent<HTMLImageElement>) => {
     if (!isPickingColor || !originalImage) return;
 
     const canvas = document.createElement("canvas");
     const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
     canvas.width = originalImage.width;
     canvas.height = originalImage.height;
     ctx.drawImage(originalImage, 0, 0);
 
-    const rect = e.target.getBoundingClientRect();
+    const rect = e.currentTarget.getBoundingClientRect();
     const x = Math.floor(
       (e.clientX - rect.left) * (originalImage.width / rect.width)
     );
@@ -123,7 +131,7 @@ export default function ColorRemover() {
     const [r, g, b] = imageData.data;
 
     const hexColor =
-      "#" + [r, g, b].map((x) => x.toString(16).padStart(2, "0")).join("");
+      "#" + [r, g, b].map((c) => c.toString(16).padStart(2, "0")).join("");
     setTargetColor(hexColor);
     setIsPickingColor(false);
     removeBackground(originalImage, threshold, hexColor);
@@ -131,9 +139,8 @@ export default function ColorRemover() {
 
   const downloadImage = () => {
     if (!processedImage) return;
-
     const link = document.createElement("a");
-    link.download = "imagem-sem-fundo.png";
+    link.download = "imagem-sem-cor.png";
     link.href = processedImage;
     link.click();
   };
@@ -146,13 +153,11 @@ export default function ColorRemover() {
     setIsPickingColor(false);
   };
 
-  const handleZoomMove = (e) => {
+  const handleZoomMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!processedImageRef.current) return;
-
     const rect = processedImageRef.current.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
-
     setZoomPosition({ x, y, show: true });
   };
 
@@ -164,9 +169,9 @@ export default function ColorRemover() {
     <div className="min-h-screen bg-gradient-to-br p-8">
       <div className="max-w-7xl mx-auto">
         <div className="text-center mb-8">
-          <h1 className="text-lg font-semibold">Removedor de Cor de Fundo</h1>
+          <h1 className="text-lg font-semibold">Removedor de Cor</h1>
           <p className="text-muted-foreground text-sm">
-            Remova qualquer cor de fundo das suas imagens
+            Deixe suas imagens transparentes.
           </p>
         </div>
 
@@ -174,13 +179,13 @@ export default function ColorRemover() {
           <FileDropzone
             onUpload={handleFilesUpload}
             accept="image/*"
-            label="Arraste uma imagem, clique para selecionar ou cole (Ctrl+V)"
             isLoading={isProcessing}
+            className="mx-auto max-w-lg"
           />
         ) : (
           <div className="space-y-6">
             {/* Controles */}
-            <Card className="p-4">
+            <Card className="p-4 mx-auto max-w-lg">
               <div className="space-y-4">
                 <div className="flex flex-col md:flex-row gap-4">
                   {/* Seletor de Cor */}
@@ -217,7 +222,7 @@ export default function ColorRemover() {
                   <div className="flex gap-2 md:items-end">
                     <Button onClick={reset} variant="outline">
                       <Trash2 className="w-4 h-4" />
-                      <span className="hidden sm:inline">Nova</span>
+                      <span className="hidden sm:inline ml-2">Nova</span>
                     </Button>
 
                     <Button
@@ -225,7 +230,6 @@ export default function ColorRemover() {
                       disabled={!processedImage || isProcessing}
                     >
                       <Download className="w-4 h-4" />
-                      Download
                     </Button>
                   </div>
                 </div>
@@ -233,7 +237,6 @@ export default function ColorRemover() {
                 {/* Controle de Tolerância */}
                 <div>
                   <Label className="mb-2 block">Tolerância: {threshold}</Label>
-
                   <input
                     type="range"
                     min="0"
@@ -242,7 +245,6 @@ export default function ColorRemover() {
                     onChange={handleThresholdChange}
                     className="w-full h-2 bg-neutral-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
                   />
-
                   <span className="text-xs text-muted-foreground block mt-1">
                     Ajuste para remover tons similares à cor selecionada
                   </span>
@@ -254,7 +256,6 @@ export default function ColorRemover() {
             <div className="grid md:grid-cols-2 gap-6">
               <div>
                 <Badge className="mb-2">Original</Badge>
-
                 <div
                   className={`relative bg-slate-100 rounded-lg overflow-hidden transition-all ${
                     isPickingColor && "border-4 border-blue-500"
@@ -270,7 +271,7 @@ export default function ColorRemover() {
                   />
                   {isPickingColor && (
                     <div className="absolute inset-0 bg-blue-500/20 pointer-events-none flex items-center justify-center">
-                      <div className="bg-blue-600 text-white text-sm px-6 py-2 rounded-full flex gap-2 items-center ">
+                      <div className="bg-blue-600 text-white text-sm px-6 py-2 rounded-full flex gap-2 items-center">
                         <Info className="w-4 h-4" />
                         Clique para selecionar a cor
                       </div>
@@ -281,12 +282,11 @@ export default function ColorRemover() {
 
               <div>
                 <Badge className="mb-2">
-                  Sem Fundo
+                  Sem Cor
                   {isProcessing && (
                     <RefreshCw className="w-3 h-3 ml-2 inline animate-spin" />
                   )}
                 </Badge>
-
                 <div
                   ref={processedImageRef}
                   onMouseMove={handleZoomMove}
@@ -299,54 +299,57 @@ export default function ColorRemover() {
                     backgroundPosition: "0 0, 0 10px, 10px -10px, -10px 0px",
                   }}
                 >
-                  <img
-                    src={processedImage || ""}
-                    alt="Processado"
-                    className="w-full h-auto"
-                  />
-
-                  {/* Lupa com zoom */}
-                  {zoomPosition.show && processedImage && (
-                    <div>
-                      <div
-                        className="absolute z-50 pointer-events-none border-4 border-white shadow-2xl rounded-full overflow-hidden"
-                        style={{
-                          width: "300px",
-                          height: "300px",
-                          left: `${zoomPosition.x - 75}px`,
-                          top: `${zoomPosition.y - 75}px`,
-                          backgroundImage: `url(${processedImage})`,
-                          backgroundSize: `${
-                            processedImageRef.current?.offsetWidth * 3
-                          }px ${processedImageRef.current?.offsetHeight * 3}px`,
-                          backgroundPosition: `-${zoomPosition.x * 3 - 75}px -${
-                            zoomPosition.y * 3 - 75
-                          }px`,
-                          backgroundRepeat: "no-repeat",
-                        }}
-                      >
-                        <div className="absolute inset-0 border-2 border-blue-500 rounded-full" />
-                        <div className="absolute top-1/2 left-0 right-0 h-px bg-blue-500" />
-                        <div className="absolute left-1/2 top-0 bottom-0 w-px bg-blue-500" />
-                      </div>
-
-                      <div
-                        className="absolute pointer-events-none border-4 border-white shadow-2xl rounded-full overflow-hidden"
-                        style={{
-                          width: "300px",
-                          height: "300px",
-                          left: `${zoomPosition.x - 75}px`,
-                          top: `${zoomPosition.y - 75}px`,
-                          backgroundColor: "white",
-                          backgroundImage:
-                            "linear-gradient(45deg, #e2e8f0 25%, transparent 25%), linear-gradient(-45deg, #e2e8f0 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #e2e8f0 75%), linear-gradient(-45deg, transparent 75%, #e2e8f0 75%)",
-                          backgroundSize: "20px 20px",
-                          backgroundPosition:
-                            "0 0, 0 10px, 10px -10px, -10px 0px",
-                        }}
-                      />
-                    </div>
+                  {processedImage && (
+                    <img
+                      src={processedImage}
+                      alt="Processado"
+                      className="w-full h-auto"
+                    />
                   )}
+                  {zoomPosition.show &&
+                    processedImage &&
+                    processedImageRef.current && (
+                      <>
+                        <div
+                          className="absolute z-10 pointer-events-none border-4 border-white shadow-2xl rounded-full overflow-hidden"
+                          style={{
+                            width: "300px",
+                            height: "300px",
+                            left: `${zoomPosition.x - 75}px`,
+                            top: `${zoomPosition.y - 75}px`,
+                            backgroundColor: "white",
+                            backgroundImage:
+                              "linear-gradient(45deg, #e2e8f0 25%, transparent 25%), linear-gradient(-45deg, #e2e8f0 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #e2e8f0 75%), linear-gradient(-45deg, transparent 75%, #e2e8f0 75%)",
+                            backgroundSize: "20px 20px",
+                            backgroundPosition:
+                              "0 0, 0 10px, 10px -10px, -10px 0px",
+                          }}
+                        />
+                        <div
+                          className="absolute z-20 pointer-events-none border-4 border-white shadow-2xl rounded-full overflow-hidden"
+                          style={{
+                            width: "300px",
+                            height: "300px",
+                            left: `${zoomPosition.x - 75}px`,
+                            top: `${zoomPosition.y - 75}px`,
+                            backgroundImage: `url(${processedImage})`,
+                            backgroundSize: `${
+                              processedImageRef.current.offsetWidth * 3
+                            }px ${
+                              processedImageRef.current.offsetHeight * 3
+                            }px`,
+                            backgroundPosition: `-${
+                              zoomPosition.x * 3 - 75
+                            }px -${zoomPosition.y * 3 - 75}px`,
+                            backgroundRepeat: "no-repeat",
+                          }}
+                        >
+                          <div className="absolute inset-0 border-2 border-blue-500 rounded-full" />
+                          <div className="absolute top-1/2 left-0 right-0 h-px bg-blue-500" />
+                          <div className="absolute left-1/2 top-0 bottom-0 w-px bg-blue-500" />
+                        </div>
+                      </>
+                    )}
                 </div>
               </div>
             </div>

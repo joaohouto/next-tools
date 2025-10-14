@@ -9,8 +9,8 @@ import {
   Timer,
   Smile,
   Camera,
-  Crop,
   BookImage,
+  Eraser,
 } from "lucide-react";
 
 export const UNORDERED_LIST = [
@@ -72,8 +72,13 @@ export const UNORDERED_LIST = [
     icon: <Camera />,
   },
   {
-    title: "Remover Cor",
+    title: "Removedor de Cor",
     path: "/color-remover",
+    icon: <Eraser />,
+  },
+  {
+    title: "Removedor de Fundo",
+    path: "/background-remover",
     icon: <BookImage />,
   },
 ];
