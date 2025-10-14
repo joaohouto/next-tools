@@ -16,7 +16,6 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import { GithubIcon } from "lucide-react";
 
 const itemVariants = {
   hidden: { y: 20, opacity: 0, filter: "blur(6px)" },
@@ -75,13 +74,14 @@ export default function Home() {
             <CommandEmpty>Nenhum resultado</CommandEmpty>
           </CommandList>
         </Command>
+      </motion.div>
 
+      <motion.div variants={itemVariants} custom={4} className="w-full">
         <a
           className="text-xs text-muted-foreground mt-8 flex items-center justify-center gap-2"
           href="https://github.com/joaohouto/next-tools"
         >
-          <GithubIcon className="size-4" />
-          /joaohouto/next-tools
+          github/joaohouto/next-tools
         </a>
       </motion.div>
     </motion.div>

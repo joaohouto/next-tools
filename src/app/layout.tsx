@@ -6,6 +6,7 @@ import { CommandMenu } from "@/components/command-menu";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { Analytics } from "@vercel/analytics/next";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -18,6 +19,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata = {
+  metadataBase: new URL("https://tools.joaocouto.com"),
+
   title: {
     default: "tools",
     template: `%s | tools`,
@@ -54,6 +57,8 @@ export default function RootLayout({
             />
           </TooltipProvider>
         </ThemeProvider>
+
+        <Analytics />
       </body>
     </html>
   );

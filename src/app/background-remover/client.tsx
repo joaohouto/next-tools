@@ -135,7 +135,7 @@ export default function AIBackgroundRemover() {
                 {isProcessing && (
                   <div className="space-y-2">
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">
+                      <span className="text-muted-foreground animate-pulse">
                         Processando com IA...
                       </span>
                       <span className="font-medium">{progress}%</span>
@@ -148,12 +148,12 @@ export default function AIBackgroundRemover() {
                   <div className="flex gap-2 justify-center">
                     <Button onClick={reset} variant="outline">
                       <Trash2 className="w-4 h-4" />
-                      Nova Imagem
+                      Novo
                     </Button>
 
                     <Button onClick={downloadImage} disabled={!processedImage}>
                       <Download className="w-4 h-4" />
-                      Download PNG
+                      Download
                     </Button>
                   </div>
                 )}

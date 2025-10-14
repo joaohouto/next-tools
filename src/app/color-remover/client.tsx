@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { Download, RefreshCw, Trash2, Pipette, Info } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import FileDropzone from "@/components/file-dropzone";
+import { useDebounce } from "@/hooks/use-debounce";
 
 export default function ColorRemover() {
   const [originalImage, setOriginalImage] = useState<HTMLImageElement | null>(
@@ -15,6 +16,7 @@ export default function ColorRemover() {
   );
   const [processedImage, setProcessedImage] = useState<string | null>(null);
   const [threshold, setThreshold] = useState(30);
+  const debouncedThreshold = useDebounce(threshold, 500);
   const [targetColor, setTargetColor] = useState("#ffffff");
   const [isProcessing, setIsProcessing] = useState(false);
   const [isPickingColor, setIsPickingColor] = useState(false);
@@ -95,10 +97,13 @@ export default function ColorRemover() {
   const handleThresholdChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newThreshold = parseInt(e.target.value, 10);
     setThreshold(newThreshold);
-    if (originalImage) {
-      removeBackground(originalImage, newThreshold, targetColor);
-    }
   };
+
+  useEffect(() => {
+    if (originalImage) {
+      removeBackground(originalImage, debouncedThreshold, targetColor);
+    }
+  }, [debouncedThreshold]);
 
   const handleColorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newColor = e.target.value;
@@ -222,7 +227,7 @@ export default function ColorRemover() {
                   <div className="flex gap-2 md:items-end">
                     <Button onClick={reset} variant="outline">
                       <Trash2 className="w-4 h-4" />
-                      <span className="hidden sm:inline ml-2">Nova</span>
+                      <span className="hidden sm:inline">Nova</span>
                     </Button>
 
                     <Button

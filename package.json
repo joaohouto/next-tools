@@ -39,6 +39,7 @@
     "@radix-ui/react-toggle-group": "^1.1.2",
     "@radix-ui/react-tooltip": "^1.1.8",
     "@types/react-beautiful-dnd": "^13.1.8",
+    "@vercel/analytics": "^1.5.0",
     "@zxing/browser": "^0.1.5",
     "axios": "^1.7.9",
     "canvas": "^3.1.2",
