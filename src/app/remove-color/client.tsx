@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
-import { Download, RefreshCw, Trash2, Pipette, Info } from "lucide-react";
+import { Download, RefreshCw, Trash2, Pipette, Info, Copy } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import FileDropzone from "@/components/file-dropzone";
 import { useDebounce } from "@/hooks/use-debounce";
+import { toast } from "sonner";
 
 export default function ColorRemover() {
   const [originalImage, setOriginalImage] = useState<HTMLImageElement | null>(
@@ -150,6 +151,18 @@ export default function ColorRemover() {
     link.click();
   };
 
+  const copyImage = async () => {
+    if (!processedImage) return;
+
+    try {
+      await navigator.clipboard.writeText(processedImage);
+      toast.success("Imagem copiada!");
+    } catch (err) {
+      console.error("Erro ao copiar:", err);
+      toast.error("Erro ao copiar");
+    }
+  };
+
   const reset = () => {
     setOriginalImage(null);
     setProcessedImage(null);
@@ -231,10 +244,20 @@ export default function ColorRemover() {
                     </Button>
 
                     <Button
+                      onClick={copyImage}
+                      disabled={!processedImage || isProcessing}
+                      size="icon"
+                      variant="outline"
+                    >
+                      <Copy />
+                    </Button>
+
+                    <Button
                       onClick={downloadImage}
                       disabled={!processedImage || isProcessing}
+                      size="icon"
                     >
-                      <Download className="w-4 h-4" />
+                      <Download />
                     </Button>
                   </div>
                 </div>

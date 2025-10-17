@@ -11,11 +11,12 @@ import {
   Camera,
   BookImage,
   Eraser,
+  PenTool,
 } from "lucide-react";
 
 export const UNORDERED_LIST = [
   {
-    title: "Reconhecer Texto (OCR)",
+    title: "Reconhecer Texto",
     path: "/ocr",
     icon: <ScanText />,
   },
@@ -72,14 +73,19 @@ export const UNORDERED_LIST = [
     icon: <Camera />,
   },
   {
-    title: "Removedor de Cor",
-    path: "/color-remover",
+    title: "Remover Cor",
+    path: "/remove-color",
     icon: <Eraser />,
   },
   {
-    title: "Removedor de Fundo",
-    path: "/background-remover",
+    title: "Remover Fundo",
+    path: "/remove-bg",
     icon: <BookImage />,
+  },
+  {
+    title: "Vetorizar Logo",
+    path: "/vectorizer",
+    icon: <PenTool />,
   },
 ];
 

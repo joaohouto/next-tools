@@ -61,6 +61,7 @@
     "openai": "^4.83.0",
     "pdf-lib": "^1.17.1",
     "pdfjs-dist": "^5.3.93",
+    "potrace": "^2.1.8",
     "qrcode.react": "^4.2.0",
     "react": "^19.0.0",
     "react-beautiful-dnd": "^13.1.1",
@@ -88,6 +89,7 @@
   "devDependencies": {
     "@types/gyronorm": "^2.0.4",
     "@types/node": "^20",
+    "@types/potrace": "^2.1.5",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@types/react-window": "^1.8.8",
