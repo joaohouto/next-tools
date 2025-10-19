@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useRef } from "react";
-import { Download, RefreshCw, Trash2, Sparkles } from "lucide-react";
+import { Download, RefreshCw, Trash2, Sparkles, Copy } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -85,6 +85,26 @@ export default function AIBackgroundRemover() {
     link.click();
   };
 
+  const copyImage = async () => {
+    if (!processedImage) return;
+
+    try {
+      const response = await fetch(processedImage);
+      const blob = await response.blob();
+
+      await navigator.clipboard.write([
+        new ClipboardItem({
+          [blob.type]: blob,
+        }),
+      ]);
+
+      toast.success("Imagem copiada!");
+    } catch (err) {
+      console.error("Erro ao copiar:", err);
+      toast.error("Erro ao copiar imagem");
+    }
+  };
+
   const reset = () => {
     if (processedImage) {
       URL.revokeObjectURL(processedImage);
@@ -130,14 +150,15 @@ export default function AIBackgroundRemover() {
         ) : (
           <div className="space-y-6">
             {/* Controles */}
-            <Card className="p-4 mx-auto max-w-lg">
+            <Card className="p-4 mx-auto max-w-lg w-fit">
               <div className="space-y-4">
                 {isProcessing && (
                   <div className="space-y-2">
-                    <div className="flex items-center justify-between text-sm">
+                    <div className="flex items-center justify-between text-sm gap-8">
                       <span className="text-muted-foreground animate-pulse">
                         Processando com IA...
                       </span>
+
                       <span className="font-medium">{progress}%</span>
                     </div>
                     <Progress value={progress} className="h-2" />
@@ -145,10 +166,19 @@ export default function AIBackgroundRemover() {
                 )}
 
                 {!isProcessing && (
-                  <div className="flex gap-2 justify-center">
+                  <div className="flex flex-col sm:flex-row gap-2 justify-center">
                     <Button onClick={reset} variant="outline">
                       <Trash2 className="w-4 h-4" />
                       Novo
+                    </Button>
+
+                    <Button
+                      onClick={copyImage}
+                      disabled={!processedImage}
+                      variant="outline"
+                    >
+                      <Copy className="w-4 h-4" />
+                      Copiar
                     </Button>
 
                     <Button onClick={downloadImage} disabled={!processedImage}>

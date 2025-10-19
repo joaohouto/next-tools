@@ -155,11 +155,21 @@ export default function ColorRemover() {
     if (!processedImage) return;
 
     try {
-      await navigator.clipboard.writeText(processedImage);
+      // Converte base64 para Blob
+      const response = await fetch(processedImage);
+      const blob = await response.blob();
+
+      // Copia como imagem para área de transferência
+      await navigator.clipboard.write([
+        new ClipboardItem({
+          [blob.type]: blob,
+        }),
+      ]);
+
       toast.success("Imagem copiada!");
     } catch (err) {
       console.error("Erro ao copiar:", err);
-      toast.error("Erro ao copiar");
+      toast.error("Erro ao copiar imagem");
     }
   };
 
