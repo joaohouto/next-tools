@@ -8,11 +8,11 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Copy, ExternalLink, Plus, X } from 'lucide-react';
 
 export default function WhatsAppLinkGenerator() {
-  const [phone, setPhone] = useState('');
-  const [message, setMessage] = useState('');
-  const [templates, setTemplates] = useState([]);
-  const [newTemplate, setNewTemplate] = useState('');
-  const [showTemplateInput, setShowTemplateInput] = useState(false);
+  const [phone, setPhone] = useState<string>('');
+  const [message, setMessage] = useState<string>('');
+  const [templates, setTemplates] = useState<string[]>([]);
+  const [newTemplate, setNewTemplate] = useState<string>('');
+  const [showTemplateInput, setShowTemplateInput] = useState<boolean>(false);
 
   React.useEffect(() => {
     const savedTemplates = localStorage.getItem('whatsapp-templates');
@@ -29,7 +29,7 @@ export default function WhatsAppLinkGenerator() {
     localStorage.setItem('whatsapp-templates', JSON.stringify(templates));
   }, [templates]);
 
-  const cleanPhone = (phoneNumber) => {
+  const cleanPhone = (phoneNumber: string): string => {
     // Remove tudo que não é número
     const cleaned = phoneNumber.replace(/\D/g, '');
     
@@ -41,7 +41,7 @@ export default function WhatsAppLinkGenerator() {
     return cleaned;
   };
 
-  const generateWhatsAppLink = () => {
+  const generateWhatsAppLink = (): string => {
     const cleanedPhone = cleanPhone(phone);
     if (!cleanedPhone) return '';
     
@@ -49,21 +49,21 @@ export default function WhatsAppLinkGenerator() {
     return `https://web.whatsapp.com/send/?phone=${cleanedPhone}&text=${encodedMessage}&type=phone_number&app_absent=0`;
   };
 
-  const copyToClipboard = () => {
+  const copyToClipboard = (): void => {
     const link = generateWhatsAppLink();
     if (link) {
       navigator.clipboard.writeText(link);
     }
   };
 
-  const openWhatsApp = () => {
+  const openWhatsApp = (): void => {
     const link = generateWhatsAppLink();
     if (link) {
       window.open(link, '_blank');
     }
   };
 
-  const addTemplate = () => {
+  const addTemplate = (): void => {
     if (newTemplate.trim()) {
       setTemplates([...templates, newTemplate.trim()]);
       setNewTemplate('');
@@ -71,11 +71,11 @@ export default function WhatsAppLinkGenerator() {
     }
   };
 
-  const removeTemplate = (index) => {
+  const removeTemplate = (index: number): void => {
     setTemplates(templates.filter((_, i) => i !== index));
   };
 
-  const useTemplate = (template) => {
+  const useTemplate = (template: string): void => {
     setMessage(template);
   };
 
