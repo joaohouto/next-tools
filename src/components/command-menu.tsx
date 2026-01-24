@@ -37,7 +37,7 @@ export function CommandMenu() {
     () => {
       setOpen((open) => !open);
     },
-    hotKeysOptions
+    hotKeysOptions,
   );
 
   useHotkeys(
@@ -49,7 +49,7 @@ export function CommandMenu() {
         setTheme("light");
       }
     },
-    hotKeysOptions
+    hotKeysOptions,
   );
 
   useHotkeys(
@@ -57,7 +57,7 @@ export function CommandMenu() {
     () => {
       setTheme("system");
     },
-    hotKeysOptions
+    hotKeysOptions,
   );
 
   const COMMAND_LIST = [

@@ -12,6 +12,7 @@ import {
   BookImage,
   Eraser,
   PenTool,
+  AppWindow,
 } from "lucide-react";
 
 export const UNORDERED_LIST = [
@@ -87,8 +88,13 @@ export const UNORDERED_LIST = [
     path: "/vectorizer",
     icon: <PenTool />,
   },
+  {
+    title: "ZapLink",
+    path: "/zaplink",
+    icon: <AppWindow />,
+  },
 ];
 
 export const PAGE_LIST = UNORDERED_LIST.sort((a, b) =>
-  a.title.localeCompare(b.title)
+  a.title.localeCompare(b.title),
 );
