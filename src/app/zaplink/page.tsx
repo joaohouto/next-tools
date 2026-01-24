@@ -25,6 +25,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { useHotkeys } from "react-hotkeys-hook";
 import { toast } from "sonner";
+import { useLocalStorage } from "@/hooks/use-local-storage";
 
 interface Template {
   id: string;
@@ -39,80 +40,31 @@ interface PhoneSettings {
 }
 
 export default function ZapLink() {
-  const [phone, setPhone] = useState<string>("");
-  const [message, setMessage] = useState<string>("");
-  const [templates, setTemplates] = useState<Template[]>([]);
+  // Usar o hook useLocalStorage para todos os estados que precisam persistência
+  const [templates, setTemplates] = useLocalStorage<Template[]>(
+    "zaplink-templates",
+    [],
+  );
+  const [phone, setPhone] = useLocalStorage<string>("zaplink-phone", "");
+  const [message, setMessage] = useLocalStorage<string>("zaplink-message", "");
+  const [variableValues, setVariableValues] = useLocalStorage<{
+    [key: string]: string;
+  }>("zaplink-variables", {});
+  const [phoneSettings, setPhoneSettings] = useLocalStorage<PhoneSettings>(
+    "zaplink-phone-settings",
+    {
+      autoAddDDD: false,
+      defaultDDD: "11",
+      autoAddCountryCode: true,
+    },
+  );
+
+  // Estados que não precisam de persistência
   const [showTemplateModal, setShowTemplateModal] = useState<boolean>(false);
   const [showPhoneSettings, setShowPhoneSettings] = useState<boolean>(false);
   const [editingTemplate, setEditingTemplate] = useState<Template | null>(null);
   const [newTemplateName, setNewTemplateName] = useState<string>("");
   const [newTemplateContent, setNewTemplateContent] = useState<string>("");
-  const [variableValues, setVariableValues] = useState<{
-    [key: string]: string;
-  }>({});
-  const [phoneSettings, setPhoneSettings] = useState<PhoneSettings>({
-    autoAddDDD: false,
-    defaultDDD: "11",
-    autoAddCountryCode: true,
-  });
-
-  React.useEffect(() => {
-    const savedTemplates = localStorage.getItem("zaplink-templates");
-    if (savedTemplates) {
-      try {
-        setTemplates(JSON.parse(savedTemplates));
-      } catch (e) {
-        console.error("Erro ao carregar templates:", e);
-      }
-    }
-
-    const savedSettings = localStorage.getItem("zaplink-phone-settings");
-    if (savedSettings) {
-      try {
-        setPhoneSettings(JSON.parse(savedSettings));
-      } catch (e) {
-        console.error("Erro ao carregar configurações:", e);
-      }
-    }
-
-    const savedPhone = localStorage.getItem("zaplink-phone");
-    if (savedPhone) setPhone(savedPhone);
-
-    const savedMessage = localStorage.getItem("zaplink-message");
-    if (savedMessage) setMessage(savedMessage);
-
-    const savedVariables = localStorage.getItem("zaplink-variables");
-    if (savedVariables) {
-      try {
-        setVariableValues(JSON.parse(savedVariables));
-      } catch (e) {
-        console.error("Erro ao carregar variáveis:", e);
-      }
-    }
-  }, []);
-
-  React.useEffect(() => {
-    localStorage.setItem("zaplink-templates", JSON.stringify(templates));
-  }, [templates]);
-
-  React.useEffect(() => {
-    localStorage.setItem(
-      "zaplink-phone-settings",
-      JSON.stringify(phoneSettings),
-    );
-  }, [phoneSettings]);
-
-  React.useEffect(() => {
-    localStorage.setItem("zaplink-phone", phone);
-  }, [phone]);
-
-  React.useEffect(() => {
-    localStorage.setItem("zaplink-message", message);
-  }, [message]);
-
-  React.useEffect(() => {
-    localStorage.setItem("zaplink-variables", JSON.stringify(variableValues));
-  }, [variableValues]);
 
   const cleanPhone = (phoneNumber: string): string => {
     let cleaned = phoneNumber.replace(/\D/g, "");
