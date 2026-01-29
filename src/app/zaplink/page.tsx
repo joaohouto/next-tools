@@ -4,7 +4,13 @@ import React, { useState, useMemo } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -357,6 +363,14 @@ export default function ZapLink() {
                   </p>
                 )}
               </CardContent>
+              <CardFooter className="flex">
+                {whatsappLink && (
+                  <Button onClick={openWhatsApp} className="w-full">
+                    Abrir WhatsApp
+                    <ArrowUpRight />
+                  </Button>
+                )}
+              </CardFooter>
             </Card>
 
             {currentVariables.length > 0 && (
@@ -384,27 +398,17 @@ export default function ZapLink() {
             {currentVariables.length > 0 && (
               <Card>
                 <CardHeader>
-                  <div className="flex-1 flex items-center space-between">
+                  <div className="flex items-center space-between gap-2">
                     <CardTitle className="text-lg">Prévia</CardTitle>
 
-                    <div className="flex items-center space-x-2 ml-auto">
-                      {whatsappLink && (
-                        <div className="flex gap-2">
-                          <Button
-                            onClick={copyToClipboard}
-                            variant="outline"
-                            className="size-8"
-                          >
-                            <Copy />
-                          </Button>
-
-                          <Button onClick={openWhatsApp} size="sm">
-                            Enviar no WhatsApp
-                            <ArrowUpRight />
-                          </Button>
-                        </div>
-                      )}
-                    </div>
+                    <Button
+                      onClick={copyToClipboard}
+                      variant="outline"
+                      className="ml-auto"
+                    >
+                      <Copy />
+                      Copiar Mensagem
+                    </Button>
                   </div>
                 </CardHeader>
                 <CardContent>
