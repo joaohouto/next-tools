@@ -13,6 +13,7 @@ import {
   Eraser,
   PenTool,
   AppWindow,
+  Signature,
 } from "lucide-react";
 
 export const UNORDERED_LIST = [
@@ -92,6 +93,11 @@ export const UNORDERED_LIST = [
     title: "ZapLink",
     path: "/zaplink",
     icon: <AppWindow />,
+  },
+  {
+    title: "Caligrafia",
+    path: "/calligraphy",
+    icon: <Signature />,
   },
 ];
 

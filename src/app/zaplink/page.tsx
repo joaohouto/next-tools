@@ -19,15 +19,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
-import {
-  Copy,
-  ExternalLink,
-  Plus,
-  X,
-  Edit,
-  Settings,
-  ArrowUpRight,
-} from "lucide-react";
+import { Copy, Plus, X, Edit, Settings, ArrowUpRight } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { useHotkeys } from "react-hotkeys-hook";
 import { toast } from "sonner";
