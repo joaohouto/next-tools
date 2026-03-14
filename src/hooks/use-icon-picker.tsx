@@ -1,13 +1,72 @@
 "use client";
 import React, { useMemo, useState } from "react";
-import { icons as HeroIcons } from "lucide-react";
+import { icons as LucideIcons } from "lucide-react";
 
 type Icons = {
-  // the name of the component
   name: string;
-  // a more human-friendly name
   friendly_name: string;
   Component: React.FC<React.ComponentPropsWithoutRef<"svg">>;
+};
+
+export const EMOJI_CATEGORIES: Record<string, string[]> = {
+  Rostos: [
+    "😀", "😃", "😄", "😁", "😆", "😅", "😂", "🤣", "😊", "😇", "🙂", "🙃",
+    "😉", "😌", "😍", "🥰", "😘", "😗", "😙", "😚", "😋", "😛", "😝", "😜",
+    "🤩", "🥳", "😎", "🤓", "🧐", "😏", "😒", "🙄", "😬", "🤥", "😔", "😪",
+    "🤤", "😴", "😷", "🤒", "🤕", "🤢", "🤮", "🥵", "🥶", "🥴", "😵", "🤯",
+    "🤠", "🥸", "😈", "👿", "💀", "☠️", "👻", "👾", "🤖", "🎃", "😺", "😸",
+  ],
+  Pessoas: [
+    "👋", "🤚", "🖐️", "✋", "🖖", "👌", "🤌", "🤏", "✌️", "🤞", "🤟", "🤘",
+    "🤙", "👈", "👉", "👆", "🖕", "👇", "☝️", "👍", "👎", "✊", "👊", "🤛",
+    "🤜", "👏", "🙌", "👐", "🤲", "🤝", "🙏", "💪", "🦾", "🦿", "🦵", "🦶",
+    "👁️", "👀", "💋", "💄", "👄", "🦷", "👂", "🦻", "👃", "🫀", "🫁", "🧠",
+    "🦴", "👣", "🧑", "👩", "👨", "👶", "🧒", "👧", "👦", "🧓", "👴", "👵",
+  ],
+  Animais: [
+    "🐶", "🐱", "🐭", "🐹", "🐰", "🦊", "🐻", "🐼", "🐨", "🐯", "🦁", "🐮",
+    "🐷", "🐸", "🐵", "🙈", "🙉", "🙊", "🐔", "🐧", "🐦", "🦅", "🦆", "🦉",
+    "🦇", "🐺", "🐴", "🦄", "🐝", "🦋", "🐌", "🐞", "🐜", "🦟", "🦗", "🐢",
+    "🐍", "🦎", "🦖", "🦕", "🐙", "🦑", "🦀", "🐡", "🐠", "🐟", "🐬", "🐳",
+    "🐋", "🦈", "🐊", "🐅", "🐆", "🦓", "🦍", "🐘", "🦛", "🦏", "🦒", "🦘",
+  ],
+  Natureza: [
+    "🌸", "🌺", "🌻", "🌹", "🌷", "🌼", "💐", "🍀", "☘️", "🌿", "🌱", "🌲",
+    "🌳", "🌴", "🌵", "🎋", "🎍", "🍁", "🍂", "🍃", "🌾", "🌊", "🌋", "🏔️",
+    "⛰️", "🗻", "🌅", "🌄", "🌠", "🌈", "🌤️", "⛅", "🌥️", "☁️", "🌦️", "🌧️",
+    "⛈️", "🌩️", "🌪️", "🌫️", "🌬️", "🌀", "☂️", "❄️", "☃️", "⛄", "☄️", "🔥",
+    "💧", "🌊", "🌙", "⭐", "🌟", "💫", "✨", "☀️", "🌑", "🌕", "🪐", "🌍",
+  ],
+  Comida: [
+    "🍎", "🍊", "🍋", "🍇", "🍓", "🫐", "🍒", "🍑", "🥭", "🍍", "🥥", "🥝",
+    "🍅", "🍆", "🥑", "🥦", "🥬", "🥕", "🌽", "🧄", "🧅", "🥔", "🍠", "🥐",
+    "🥖", "🍞", "🧀", "🍳", "🥞", "🧇", "🥓", "🍕", "🍔", "🌮", "🌯", "🥗",
+    "🍜", "🍱", "🍣", "🍙", "🍚", "🍛", "🍦", "🍧", "🍨", "🍰", "🎂", "🍫",
+    "🍬", "🍭", "🍿", "☕", "🍵", "🧃", "🥤", "🍺", "🥂", "🍷", "🧊", "🍽️",
+  ],
+  Objetos: [
+    "📱", "💻", "🖥️", "⌨️", "🖱️", "🖨️", "📷", "📸", "📹", "🎥", "📺", "📻",
+    "🎙️", "🎚️", "🎛️", "📡", "🔋", "🔌", "💡", "🔦", "🕯️", "⌛", "⏰", "⌚",
+    "📌", "📍", "✂️", "🗃️", "📁", "📂", "📝", "✏️", "🖊️", "📖", "📚", "📊",
+    "📈", "📉", "💰", "💴", "💵", "💶", "💷", "💸", "💳", "💎", "🔑", "🗝️",
+    "🔐", "🔒", "🔓", "🔨", "🪓", "🔧", "🪛", "🔩", "⚙️", "🗜️", "🔗", "🧲",
+    "🪜", "🧰", "🛡️", "⚔️", "🗡️", "🏹", "🔭", "🔬", "💉", "🩺", "🩻", "🧬",
+  ],
+  Símbolos: [
+    "❤️", "🧡", "💛", "💚", "💙", "💜", "🖤", "🤍", "🤎", "💔", "❣️", "💕",
+    "💞", "💓", "💗", "💖", "💘", "💝", "💟", "☮️", "✝️", "☪️", "🕉️", "✡️",
+    "☯️", "♻️", "⚜️", "🔰", "✅", "❌", "⛔", "🚫", "💯", "❗", "❓", "‼️",
+    "⁉️", "⚠️", "🚸", "🔱", "💠", "Ⓜ️", "🌀", "💤", "♿", "🎵", "🎶", "🔔",
+    "🔕", "💬", "💭", "🗯️", "📢", "📣", "🔊", "🔇", "🔈", "🔉", "🃏", "🀄",
+  ],
+  Atividades: [
+    "⚽", "🏀", "🏈", "⚾", "🎾", "🏐", "🏉", "🥏", "🎱", "🏓", "🏸", "🥅",
+    "⛳", "🎯", "🎣", "🤿", "🥊", "🥋", "🛹", "🛼", "🛷", "⛸️", "🥌", "🎿",
+    "⛷️", "🏂", "🪂", "🏋️", "🤸", "⛹️", "🤺", "🏇", "🧘", "🏄", "🏊", "🚣",
+    "🧗", "🚵", "🚴", "🏆", "🥇", "🥈", "🥉", "🏅", "🎖️", "🎗️", "🎪", "🤹",
+    "🎭", "🎨", "🎬", "🎤", "🎧", "🎼", "🥁", "🎷", "🎺", "🎸", "🎻", "🎲",
+    "♟️", "🎮", "🕹️", "🧩", "🎳", "🎯",
+  ],
 };
 
 export const useIconPicker = (): {
@@ -18,28 +77,21 @@ export const useIconPicker = (): {
 } => {
   const icons: Icons[] = useMemo(
     () =>
-      Object.entries(HeroIcons).map(([iconName, IconComponent]) => ({
+      Object.entries(LucideIcons).map(([iconName, IconComponent]) => ({
         name: iconName,
-        // split the icon name at capital letters and join them with a space
         friendly_name: iconName.match(/[A-Z][a-z]+/g)?.join(" ") ?? iconName,
         Component: IconComponent,
       })),
     []
   );
 
-  // these lines can be removed entirely if you're not using the controlled component approach
   const [search, setSearch] = useState("");
-  //   memoize the search functionality
+
   const filteredIcons = useMemo(() => {
-    return icons.filter((icon) => {
-      if (search === "") {
-        return true;
-      } else if (icon.name.toLowerCase().includes(search.toLowerCase())) {
-        return true;
-      } else {
-        return false;
-      }
-    });
+    if (search === "") return icons;
+    return icons.filter((icon) =>
+      icon.name.toLowerCase().includes(search.toLowerCase())
+    );
   }, [icons, search]);
 
   return { search, setSearch, icons: filteredIcons, iconCount: icons.length };
@@ -55,7 +107,7 @@ export const IconRenderer = ({
   strokeWidth?: number;
   size?: number;
 } & React.ComponentPropsWithoutRef<"svg">) => {
-  const IconComponent = HeroIcons[icon as keyof typeof HeroIcons];
+  const IconComponent = LucideIcons[icon as keyof typeof LucideIcons];
 
   if (!IconComponent) {
     return null;
