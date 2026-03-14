@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Copy, Lock, RefreshCw, Shield, ShieldCheck } from "lucide-react";
-import { PageHeader } from "@/components/page-header";
+import { Copy, RefreshCw, Shield, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { generatePassword } from "@/lib/generate-password";
@@ -69,13 +68,8 @@ export default function Page() {
   const hasAnyCharset = CHARSET_OPTIONS.some((o) => config[o.id]);
 
   return (
-    <div className="min-h-screen bg-neutral-100 dark:bg-neutral-900 p-6 flex flex-col items-center">
+    <div className="min-h-screen flex items-center justify-center p-6">
       <div className="w-full max-w-sm flex flex-col gap-6">
-        <PageHeader
-          title="Gerador de Senha"
-          description="Gere senhas seguras."
-          icon={<Lock className="w-5 h-5" />}
-        />
 
         {/* Password display */}
         <div

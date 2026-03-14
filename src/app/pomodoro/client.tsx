@@ -6,8 +6,7 @@ import { useReward } from "react-rewards";
 import { getMinutes, getSeconds } from "@/lib/time";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Button } from "@/components/ui/button";
-import { Pause, Play, Timer } from "lucide-react";
-import { PageHeader } from "@/components/page-header";
+import { Pause, Play } from "lucide-react";
 
 const POMODORO = 25 * 60;
 const SHORT_BREAK = 5 * 60;
@@ -100,15 +99,7 @@ export default function Page() {
   }, [secondsLeft]);
 
   return (
-    <div className="min-h-screen bg-neutral-100 dark:bg-neutral-900 p-6 flex flex-col items-center">
-      <div className="w-full max-w-[460px]">
-        <PageHeader
-          title="Pomodoro"
-          description="Gerencie seu tempo com o método Pomodoro."
-          icon={<Timer className="w-5 h-5" />}
-        />
-      </div>
-    <div className="max-w-[460px] flex-1 flex flex-col items-center justify-center gap-4 pb-8">
+    <div className="max-w-[460px] min-h-screen mx-auto p-8 gap-4 flex flex-col items-center justify-center">
       <div>
         <svg className="w-[300px] h-[300px]" viewBox="0 0 100 100">
           <path
@@ -168,7 +159,6 @@ export default function Page() {
       )}
 
       <span id="rewardId" style={{ marginTop: -28 }} />
-    </div>
     </div>
   );
 }

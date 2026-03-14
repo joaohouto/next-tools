@@ -39,7 +39,6 @@ import {
   ChevronUp,
 } from "lucide-react";
 import { toast } from "sonner";
-import { PageHeader } from "@/components/page-header";
 import { PDFDocument, rgb } from "pdf-lib";
 
 // ─────────────────────────────────────────────
@@ -1367,38 +1366,42 @@ export default function LineSheetGenerator() {
     <TooltipProvider>
       <style dangerouslySetInnerHTML={{ __html: buildPrintCSS(config) }} />
 
-      <div className="min-h-screen p-4 bg-neutral-100 dark:bg-neutral-900">
-        <div className="max-w-7xl mx-auto py-4 space-y-6">
-          <PageHeader
-            title="Folhas Pautadas"
-            description="Crie folhas personalizadas para cadernos, diários e planejadores."
-            icon={<BookOpen className="w-5 h-5" />}
-            actions={
-              <div className="flex gap-2">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      onClick={handleExportPDF}
-                      variant="outline"
-                      size="sm"
-                      className="gap-2"
-                      disabled={exporting}
-                    >
-                      <FileDown className="w-4 h-4" />
-                      {exporting ? "Gerando..." : "Exportar PDF"}
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    Gera um PDF vetorial com todas as páginas
-                  </TooltipContent>
-                </Tooltip>
-                <Button onClick={handlePrint} size="sm" className="gap-2">
-                  <Printer className="w-4 h-4" />
-                  Imprimir
-                </Button>
-              </div>
-            }
-          />
+      <div className="min-h-screen p-4 bg-neutral-200 dark:bg-neutral-900">
+        <div className="max-w-7xl mx-auto py-8 space-y-6">
+          {/* HEADER */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 print:hidden">
+            <div>
+              <h1 className="text-2xl font-bold flex items-center gap-2">
+                <BookOpen className="w-6 h-6 text-primary" />
+                Gerador de Folhas Pautadas
+              </h1>
+              <p className="text-muted-foreground text-sm mt-1">
+                Crie folhas personalizadas para cadernos, diários e planejadores.
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    onClick={handleExportPDF}
+                    variant="outline"
+                    className="gap-2"
+                    disabled={exporting}
+                  >
+                    <FileDown className="w-4 h-4" />
+                    {exporting ? "Gerando..." : "Exportar PDF"}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  Gera um PDF vetorial com todas as páginas
+                </TooltipContent>
+              </Tooltip>
+              <Button onClick={handlePrint} size="lg" className="gap-2">
+                <Printer className="w-4 h-4" />
+                Imprimir
+              </Button>
+            </div>
+          </div>
 
           <div className="grid lg:grid-cols-12 gap-6">
             {/* SETTINGS PANEL */}

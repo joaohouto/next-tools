@@ -5,10 +5,9 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { useDebounce } from "@/hooks/use-debounce";
 import { exportEssay } from "@/lib/export-image";
-import { Download, Minus, Moon, NotepadText, Plus, Sun } from "lucide-react";
+import { Download, Minus, Moon, Plus, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useEffect, useRef, useState } from "react";
-import { PageHeader } from "@/components/page-header";
 import dayjs from "dayjs";
 
 export default function Essay() {
@@ -53,14 +52,7 @@ export default function Essay() {
   };
 
   return (
-    <div className="min-h-screen bg-neutral-100 dark:bg-neutral-900 p-6 gap-4 flex flex-col items-center">
-      <div className="w-full max-w-[774px]">
-        <PageHeader
-          title="Folha de Redação"
-          description="Escreva e exporte sua redação."
-          icon={<NotepadText className="w-5 h-5" />}
-        />
-      </div>
+    <div className="mx-auto p-8 gap-4 flex flex-col justify-center items-center">
       <nav className="w-[774px] flex flex-row-reverse gap-3 items-center">
         <Button
           variant="outline"

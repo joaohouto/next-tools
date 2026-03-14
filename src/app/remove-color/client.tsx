@@ -1,8 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
-import { Download, RefreshCw, Trash2, Pipette, Info, Copy, Eraser } from "lucide-react";
-import { PageHeader } from "@/components/page-header";
+import { Download, RefreshCw, Trash2, Pipette, Info, Copy } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -196,14 +195,13 @@ export default function ColorRemover() {
   };
 
   return (
-    <div className="min-h-screen bg-neutral-100 dark:bg-neutral-900 p-6">
+    <div className="min-h-screen bg-gradient-to-br p-8">
       <div className="max-w-7xl mx-auto">
-        <div className="mb-6">
-          <PageHeader
-            title="Remover Cor"
-            description="Deixe suas imagens transparentes."
-            icon={<Eraser className="w-5 h-5" />}
-          />
+        <div className="text-center mb-8">
+          <h1 className="text-lg font-semibold">Removedor de Cor</h1>
+          <p className="text-muted-foreground text-sm">
+            Deixe suas imagens transparentes.
+          </p>
         </div>
 
         {!originalImage ? (
