@@ -2,6 +2,28 @@ import * as htmlToImage from "html-to-image";
 import { elementToSVG, inlineResources } from "dom-to-svg";
 import { toast } from "sonner";
 
+/**
+ * Removes embedded Tailwind/document CSS and class attributes from an SVG
+ * data URI produced by html-to-image so the exported file stays small and clean.
+ * Important styles (background, color, border-radius) are always inline on the
+ * element, so stripping class-based styles doesn't affect the icon appearance.
+ */
+const minifyIconSvg = (dataUri: string): string => {
+  const prefix = "data:image/svg+xml;charset=utf-8,";
+  let svg = decodeURIComponent(dataUri.slice(prefix.length));
+
+  // Remove embedded <style> blocks (they contain the full Tailwind stylesheet)
+  svg = svg.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "");
+
+  // Remove class attributes (they referenced the removed styles)
+  svg = svg.replace(/\s+class="[^"]*"/gi, "");
+
+  // Remove React/Radix data attributes that add noise
+  svg = svg.replace(/\s+data-[a-z][a-z0-9-]*="[^"]*"/gi, "");
+
+  return prefix + encodeURIComponent(svg);
+};
+
 interface QRCodeConfig {
   format: string;
   size?: number;
@@ -76,12 +98,17 @@ export const exportAsImage = async (
         render = htmlToImage.toPng;
     }
 
-    const imageUrl = await render(element, {
+    let imageUrl = await render(element, {
       cacheBust: true,
       canvasHeight: config?.canvasHeight,
       canvasWidth: config?.canvasWidth,
       pixelRatio: config?.pixelRatio,
     });
+
+    if (type === "svg") {
+      imageUrl = minifyIconSvg(imageUrl);
+    }
+
     downloadImage(imageUrl, imageFileName);
   } catch (err) {
     console.error("Erro ao exportar imagem:", err);
@@ -109,12 +136,16 @@ export const copyImage = async (
         render = htmlToImage.toPng;
     }
 
-    const imageUrl = await render(element, {
+    let imageUrl = await render(element, {
       cacheBust: true,
       canvasHeight: config?.canvasHeight,
       canvasWidth: config?.canvasWidth,
       pixelRatio: config?.pixelRatio,
     });
+
+    if (type === "svg") {
+      imageUrl = minifyIconSvg(imageUrl);
+    }
 
     const blob = await (await fetch(imageUrl)).blob();
 
