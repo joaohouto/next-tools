@@ -36,18 +36,20 @@ const IconPreview = forwardRef<HTMLDivElement, IconPreviewProps>(
               }}
             />
           ) : source.type === "emoji" ? (
-            <span
+            <div
+              aria-hidden="true"
               style={{
-                fontSize: config.iconSize * 0.58,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
                 transform: `rotate(${config.iconRotation}deg)`,
-                display: "inline-block",
+                fontSize: config.iconSize * 0.58,
                 lineHeight: 1,
                 userSelect: "none",
               }}
-              aria-hidden="true"
             >
               {source.char}
-            </span>
+            </div>
           ) : (
             <IconRenderer
               icon={source.name}

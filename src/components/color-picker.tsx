@@ -117,7 +117,7 @@ export function ColorPicker({
             ) : (
               <Paintbrush className="h-4 w-4" />
             )}
-            <div className="truncate flex-1">
+            <div className="truncate flex-1 min-w-0">
               {color ? color : "Escolha uma cor"}
             </div>
           </div>
