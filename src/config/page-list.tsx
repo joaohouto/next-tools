@@ -15,6 +15,7 @@ import {
   AppWindow,
   Signature,
   NotebookPen,
+  Contact,
 } from "lucide-react";
 
 export const UNORDERED_LIST = [
@@ -104,6 +105,11 @@ export const UNORDERED_LIST = [
     title: "Folhas Pautadas",
     path: "/line-sheet",
     icon: <NotebookPen />,
+  },
+  {
+    title: "Currículo",
+    path: "/cv",
+    icon: <Contact />,
   },
 ];
 
