@@ -63,6 +63,7 @@ interface Config {
   lineSpacingMm: number;
   lineColor: string;
   lineOpacity: number;
+  showBorder: boolean;
   marginTopMm: number;
   marginBottomMm: number;
   marginLeftMm: number;
@@ -71,6 +72,8 @@ interface Config {
   doubleSided: boolean;
   pageCount: number;
   showPageNumbers: boolean;
+  showDate: boolean;
+  dateText: string;
   headerText: string;
   footerText: string;
 }
@@ -164,6 +167,7 @@ const DEFAULT_CONFIG: Config = {
   lineSpacingMm: 7,
   lineColor: "#c8d6e5",
   lineOpacity: 100,
+  showBorder: false,
   marginTopMm: 15,
   marginBottomMm: 15,
   marginLeftMm: 20,
@@ -172,6 +176,8 @@ const DEFAULT_CONFIG: Config = {
   doubleSided: false,
   pageCount: 1,
   showPageNumbers: false,
+  showDate: false,
+  dateText: "",
   headerText: "",
   footerText: "",
 };
@@ -305,7 +311,7 @@ function renderSVGContent(
             key={`${x.toFixed(2)}-${y.toFixed(2)}`}
             cx={x}
             cy={y}
-            r={0.5}
+            r={0.3}
             fill={stroke}
           />
         );
@@ -514,6 +520,12 @@ function renderSVGContent(
   const textColor = hexToRgba(config.lineColor, (config.lineOpacity / 100) * 0.55);
   const textFontSize = 3.2;
 
+  // Header/footer positions: only render if there's margin space; clamp to safe zone
+  const headerY = Math.max(4, m.top * 0.65);
+  const footerY = Math.min(heightMm - 1, heightMm - m.bottom * 0.3);
+
+  const dateLabel = config.dateText.trim() || "Data: ____/____/________";
+
   return (
     <>
       <defs>
@@ -528,11 +540,24 @@ function renderSVGContent(
         {dotEls}
       </g>
 
-      {/* Header */}
+      {/* Border around content area */}
+      {config.showBorder && (
+        <rect
+          x={cx1}
+          y={cy1}
+          width={cx2 - cx1}
+          height={cy2 - cy1}
+          stroke={stroke}
+          strokeWidth={sw * 2}
+          fill="none"
+        />
+      )}
+
+      {/* Header text */}
       {config.headerText && (
         <text
           x={cx1}
-          y={m.top * 0.62}
+          y={headerY}
           fontSize={textFontSize}
           fill={textColor}
           fontFamily="sans-serif"
@@ -541,11 +566,25 @@ function renderSVGContent(
         </text>
       )}
 
-      {/* Footer */}
+      {/* Date field */}
+      {config.showDate && (
+        <text
+          x={cx2}
+          y={headerY}
+          textAnchor="end"
+          fontSize={textFontSize}
+          fill={textColor}
+          fontFamily="sans-serif"
+        >
+          {dateLabel}
+        </text>
+      )}
+
+      {/* Footer text */}
       {config.footerText && (
         <text
           x={cx1}
-          y={heightMm - m.bottom * 0.28}
+          y={footerY}
           fontSize={textFontSize}
           fill={textColor}
           fontFamily="sans-serif"
@@ -558,7 +597,7 @@ function renderSVGContent(
       {config.showPageNumbers && (
         <text
           x={widthMm / 2}
-          y={heightMm - m.bottom * 0.28}
+          y={footerY}
           textAnchor="middle"
           fontSize={textFontSize}
           fill={textColor}
@@ -613,7 +652,7 @@ async function exportPDF(config: Config): Promise<void> {
     };
 
     const dd = (x: number, y: number) => {
-      page.drawCircle({ x, y, size: 0.7, color: lineColor, opacity });
+      page.drawCircle({ x, y, size: 0.5, color: lineColor, opacity });
     };
 
     switch (config.lineType) {
@@ -720,16 +759,45 @@ async function exportPDF(config: Config): Promise<void> {
         break;
     }
 
+    // Border around content area
+    if (config.showBorder) {
+      page.drawRectangle({
+        x: lPt,
+        y: botPt,
+        width: rPt - lPt,
+        height: topPt - botPt,
+        borderColor: lineColor,
+        borderWidth: 1,
+        borderOpacity: opacity,
+        opacity: 0,
+      });
+    }
+
     // Header / footer text (using built-in Helvetica)
     const font = await pdfDoc.embedFont("Helvetica");
     const textColor = rgb(r * 0.6, g * 0.6, b * 0.6);
     const textSize = 9;
     const textOp = opacity * 0.6;
+    const headerYPt = topPt + 4;
+    const footerYPt = botPt - 12;
 
     if (config.headerText) {
       page.drawText(config.headerText, {
         x: lPt,
-        y: topPt + 4,
+        y: headerYPt,
+        size: textSize,
+        font,
+        color: textColor,
+        opacity: textOp,
+      });
+    }
+
+    if (config.showDate) {
+      const dateLabel = config.dateText.trim() || "Data: ____/____/________";
+      const dateW = font.widthOfTextAtSize(dateLabel, textSize);
+      page.drawText(dateLabel, {
+        x: rPt - dateW,
+        y: headerYPt,
         size: textSize,
         font,
         color: textColor,
@@ -740,7 +808,7 @@ async function exportPDF(config: Config): Promise<void> {
     if (config.footerText) {
       page.drawText(config.footerText, {
         x: lPt,
-        y: botPt - 10,
+        y: footerYPt,
         size: textSize,
         font,
         color: textColor,
@@ -753,7 +821,7 @@ async function exportPDF(config: Config): Promise<void> {
       const textW = font.widthOfTextAtSize(pageStr, textSize);
       page.drawText(pageStr, {
         x: wPt / 2 - textW / 2,
-        y: botPt - 10,
+        y: footerYPt,
         size: textSize,
         font,
         color: textColor,
@@ -874,7 +942,7 @@ function SettingsPanel({
   onChange: (updates: Partial<Config>) => void;
 }) {
   const [marginsOpen, setMarginsOpen] = useState(false);
-  const [headerFooterOpen, setHeaderFooterOpen] = useState(false);
+  const [headerFooterOpen, setHeaderFooterOpen] = useState(true);
 
   return (
     <div className="space-y-4">
@@ -983,6 +1051,19 @@ function SettingsPanel({
                   20–40% cria pauta discreta; 100% para linhas visíveis.
                 </p>
               </div>
+
+              <div className="flex items-center justify-between pt-1">
+                <div>
+                  <Label className="text-sm">Borda da Pauta</Label>
+                  <p className="text-[11px] text-muted-foreground">
+                    Moldura ao redor da área de escrita
+                  </p>
+                </div>
+                <Switch
+                  checked={config.showBorder}
+                  onCheckedChange={(v) => onChange({ showBorder: v })}
+                />
+              </div>
             </>
           )}
         </CardContent>
@@ -1035,7 +1116,7 @@ function SettingsPanel({
             </div>
           </div>
 
-          {/* Margins collapsible */}
+          {/* Margins */}
           <div>
             <button
               onClick={() => setMarginsOpen((v) => !v)}
@@ -1051,6 +1132,9 @@ function SettingsPanel({
 
             {marginsOpen && (
               <div className="pt-3 space-y-3">
+                <p className="text-[11px] text-muted-foreground">
+                  Use 0 mm para preencher toda a página.
+                </p>
                 {(
                   [
                     ["marginTopMm", "Superior"],
@@ -1060,17 +1144,33 @@ function SettingsPanel({
                   ] as const
                 ).map(([key, label]) => (
                   <div key={key} className="space-y-1.5">
-                    <div className="flex justify-between">
+                    <div className="flex justify-between items-center">
                       <Label className="text-xs">{label}</Label>
-                      <span className="text-xs font-mono text-primary">
-                        {config[key]} mm
-                      </span>
+                      <div className="flex items-center gap-1">
+                        <input
+                          type="number"
+                          value={config[key]}
+                          min={0}
+                          max={50}
+                          step={1}
+                          onChange={(e) =>
+                            onChange({
+                              [key]: Math.max(
+                                0,
+                                Math.min(50, Number(e.target.value))
+                              ),
+                            })
+                          }
+                          className="w-12 text-xs font-mono text-primary text-right bg-background border border-border rounded px-1 py-0.5 focus:outline-none focus:ring-1 focus:ring-primary"
+                        />
+                        <span className="text-xs text-muted-foreground">mm</span>
+                      </div>
                     </div>
                     <Slider
                       value={[config[key]]}
                       onValueChange={([v]) => onChange({ [key]: v })}
-                      min={5}
-                      max={40}
+                      min={0}
+                      max={50}
                       step={1}
                     />
                   </div>
@@ -1177,16 +1277,40 @@ function SettingsPanel({
         </CardHeader>
 
         {headerFooterOpen && (
-          <CardContent className="space-y-3">
+          <CardContent className="space-y-4">
             <div className="space-y-1.5">
               <Label className="text-sm">Cabeçalho</Label>
               <Input
-                placeholder="ex.: Nome, data, disciplina..."
+                placeholder="ex.: Nome, disciplina, turma..."
                 value={config.headerText}
                 onChange={(e) => onChange({ headerText: e.target.value })}
                 maxLength={80}
               />
             </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label className="text-sm">Campo de Data</Label>
+                  <p className="text-[11px] text-muted-foreground">
+                    Exibe campo no canto superior direito
+                  </p>
+                </div>
+                <Switch
+                  checked={config.showDate}
+                  onCheckedChange={(v) => onChange({ showDate: v })}
+                />
+              </div>
+              {config.showDate && (
+                <Input
+                  placeholder='ex.: "Data:" ou deixe vazio para ____/____/________'
+                  value={config.dateText}
+                  onChange={(e) => onChange({ dateText: e.target.value })}
+                  maxLength={40}
+                />
+              )}
+            </div>
+
             <div className="space-y-1.5">
               <Label className="text-sm">Rodapé</Label>
               <Input
@@ -1242,7 +1366,7 @@ export default function LineSheetGenerator() {
     <TooltipProvider>
       <style dangerouslySetInnerHTML={{ __html: buildPrintCSS(config) }} />
 
-      <div className="min-h-screen p-4 bg-slate-50 dark:bg-slate-950">
+      <div className="min-h-screen p-4 bg-neutral-200 dark:bg-neutral-900">
         <div className="max-w-7xl mx-auto py-8 space-y-6">
           {/* HEADER */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 print:hidden">
