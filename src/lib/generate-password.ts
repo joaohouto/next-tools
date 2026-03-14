@@ -1,35 +1,37 @@
-export function generatePassword(options: any) {
-  // Definindo as opções padrão caso não sejam fornecidas
-  const defaultOptions = {
-    size: 10,
-    useEspecialCharacters: true,
-    useNumbers: true,
-    useUppercase: true,
-    useSmallCase: true,
-  };
+interface PasswordOptions {
+  size?: number;
+  useEspecialCharacters?: boolean;
+  useNumbers?: boolean;
+  useUppercase?: boolean;
+  useSmallCase?: boolean;
+}
 
-  // Mesclando as opções fornecidas com as opções padrão
-  options = { ...defaultOptions, ...options };
+export function generatePassword(options: PasswordOptions = {}): string {
+  const {
+    size = 10,
+    useEspecialCharacters = true,
+    useNumbers = true,
+    useUppercase = true,
+    useSmallCase = true,
+  } = options;
 
-  // Criando os conjuntos de caracteres possíveis com base nas opções
-  let chars = "abcdefghijklmnopqrstuvwxyz";
-  let specials = "!@#$%^&*()_+{}|:<>?-=[];,./";
-  let numbers = "0123456789";
-  let uppercaseChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  const chars = "abcdefghijklmnopqrstuvwxyz";
+  const specials = "!@#$%^&*()_+{}|:<>?-=[];,./";
+  const numbers = "0123456789";
+  const uppercaseChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
   let allChars = "";
-  if (options.useSmallCase) allChars += chars;
-  if (options.useEspecialCharacters) allChars += specials;
-  if (options.useNumbers) allChars += numbers;
-  if (options.useUppercase) allChars += uppercaseChars;
+  if (useSmallCase) allChars += chars;
+  if (useEspecialCharacters) allChars += specials;
+  if (useNumbers) allChars += numbers;
+  if (useUppercase) allChars += uppercaseChars;
 
   if (allChars.length === 0) {
-    return "😝";
+    return "";
   }
 
-  // Gerando a senha
   let password = "";
-  for (let i = 0; i < options.size; i++) {
+  for (let i = 0; i < size; i++) {
     const randomIndex = Math.floor(Math.random() * allChars.length);
     password += allChars[randomIndex];
   }

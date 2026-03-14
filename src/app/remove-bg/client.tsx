@@ -1,45 +1,46 @@
 "use client";
 
-import React, { useState, useRef } from "react";
-import { Download, RefreshCw, Trash2, Sparkles, Copy } from "lucide-react";
-import { Card } from "@/components/ui/card";
+import React, { useState, useRef, useEffect } from "react";
+import { Download, Trash2, Sparkles, Copy, ImageIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import FileDropzone from "@/components/file-dropzone";
 import { removeBackground } from "@imgly/background-removal";
 import { toast } from "sonner";
 
+const CHECKERBOARD = {
+  backgroundImage:
+    "linear-gradient(45deg, #e2e8f0 25%, transparent 25%), linear-gradient(-45deg, #e2e8f0 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #e2e8f0 75%), linear-gradient(-45deg, transparent 75%, #e2e8f0 75%)",
+  backgroundSize: "20px 20px",
+  backgroundPosition: "0 0, 0 10px, 10px -10px, -10px 0px",
+  backgroundColor: "white",
+};
+
 export default function AIBackgroundRemover() {
-  const [originalImage, setOriginalImage] = useState<HTMLImageElement | null>(
-    null
-  );
+  const [originalImage, setOriginalImage] = useState<HTMLImageElement | null>(null);
   const [processedImage, setProcessedImage] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
   const [zoomPosition, setZoomPosition] = useState({ x: 0, y: 0, show: false });
   const processedImageRef = useRef<HTMLDivElement | null>(null);
 
-  const handleFilesUpload = (files: File[]) => {
-    const file = files[0];
-    if (file) {
-      processFile(file);
-    }
-  };
+  useEffect(() => {
+    return () => {
+      if (processedImage) URL.revokeObjectURL(processedImage);
+    };
+  }, [processedImage]);
 
   const processFile = (file: File) => {
     const reader = new FileReader();
     reader.onload = (e) => {
       const result = e.target?.result;
-
-      if (typeof result === "string") {
-        const img = new Image();
-        img.onload = () => {
-          setOriginalImage(img);
-          removeBackgroundAI(result);
-        };
-        img.src = result;
-      }
+      if (typeof result !== "string") return;
+      const img = new Image();
+      img.onload = () => {
+        setOriginalImage(img);
+        removeBackgroundAI(result);
+      };
+      img.src = result;
     };
     reader.readAsDataURL(file);
   };
@@ -48,26 +49,17 @@ export default function AIBackgroundRemover() {
     setIsProcessing(true);
     setProgress(0);
 
+    const progressInterval = setInterval(() => {
+      setProgress((prev) => (prev >= 90 ? (clearInterval(progressInterval), 90) : prev + 10));
+    }, 200);
+
     try {
-      // Simula progresso enquanto processa
-      const progressInterval = setInterval(() => {
-        setProgress((prev) => {
-          if (prev >= 90) {
-            clearInterval(progressInterval);
-            return 90;
-          }
-          return prev + 10;
-        });
-      }, 200);
-
       const blob = await removeBackground(imageUrl);
-
       clearInterval(progressInterval);
       setProgress(100);
-
-      const url = URL.createObjectURL(blob);
-      setProcessedImage(url);
+      setProcessedImage(URL.createObjectURL(blob));
     } catch (error) {
+      clearInterval(progressInterval);
       console.error("Erro ao remover fundo:", error);
       toast.error("Erro ao processar imagem. Tente novamente.");
     } finally {
@@ -78,7 +70,6 @@ export default function AIBackgroundRemover() {
 
   const downloadImage = () => {
     if (!processedImage) return;
-
     const link = document.createElement("a");
     link.download = "imagem-sem-fundo.png";
     link.href = processedImage;
@@ -87,17 +78,9 @@ export default function AIBackgroundRemover() {
 
   const copyImage = async () => {
     if (!processedImage) return;
-
     try {
-      const response = await fetch(processedImage);
-      const blob = await response.blob();
-
-      await navigator.clipboard.write([
-        new ClipboardItem({
-          [blob.type]: blob,
-        }),
-      ]);
-
+      const blob = await fetch(processedImage).then((r) => r.blob());
+      await navigator.clipboard.write([new ClipboardItem({ [blob.type]: blob })]);
       toast.success("Imagem copiada!");
     } catch (err) {
       console.error("Erro ao copiar:", err);
@@ -106,9 +89,7 @@ export default function AIBackgroundRemover() {
   };
 
   const reset = () => {
-    if (processedImage) {
-      URL.revokeObjectURL(processedImage);
-    }
+    if (processedImage) URL.revokeObjectURL(processedImage);
     setOriginalImage(null);
     setProcessedImage(null);
     setProgress(0);
@@ -116,178 +97,132 @@ export default function AIBackgroundRemover() {
 
   const handleZoomMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!processedImageRef.current) return;
-
     const rect = processedImageRef.current.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-
-    setZoomPosition({ x, y, show: true });
+    setZoomPosition({ x: e.clientX - rect.left, y: e.clientY - rect.top, show: true });
   };
 
-  const handleZoomLeave = () => {
-    setZoomPosition({ x: 0, y: 0, show: false });
-  };
-
-  return (
-    <div className="min-h-screen bg-gradient-to-br p-8">
-      <div className="max-w-7xl mx-auto">
-        <div className="text-center mb-8">
-          <div className="flex items-center justify-center gap-2 mb-2">
-            <h1 className="text-lg font-semibold">Removedor de Fundo com IA</h1>
+  if (!originalImage) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-6">
+        <div className="w-full max-w-sm flex flex-col gap-4">
+          <div className="text-center">
+            <p className="text-sm text-muted-foreground">
+              Processado no seu dispositivo, sem enviar para servidores.
+            </p>
           </div>
-          <p className="text-muted-foreground text-sm">
-            Remova o fundo de imagens. Processadas no seu dispositivo.
-          </p>
-        </div>
-
-        {!originalImage ? (
           <FileDropzone
-            onUpload={handleFilesUpload}
+            onUpload={(files) => files[0] && processFile(files[0])}
             accept="image/*"
             isLoading={isProcessing}
-            className="mx-auto max-w-lg"
           />
-        ) : (
-          <div className="space-y-6">
-            {/* Controles */}
-            <Card className="p-4 mx-auto max-w-lg w-fit">
-              <div className="space-y-4">
-                {isProcessing && (
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between text-sm gap-8">
-                      <span className="text-muted-foreground animate-pulse">
-                        Processando com IA...
-                      </span>
+        </div>
+      </div>
+    );
+  }
 
-                      <span className="font-medium">{progress}%</span>
-                    </div>
-                    <Progress value={progress} className="h-2" />
-                  </div>
-                )}
+  return (
+    <div className="min-h-screen p-6">
+      <div className="max-w-3xl mx-auto flex flex-col gap-6">
 
-                {!isProcessing && (
-                  <div className="flex flex-col sm:flex-row gap-2 justify-center">
-                    <Button onClick={reset} variant="outline">
-                      <Trash2 className="w-4 h-4" />
-                      Novo
-                    </Button>
-
-                    <Button
-                      onClick={copyImage}
-                      disabled={!processedImage}
-                      variant="outline"
-                    >
-                      <Copy className="w-4 h-4" />
-                      Copiar
-                    </Button>
-
-                    <Button onClick={downloadImage} disabled={!processedImage}>
-                      <Download className="w-4 h-4" />
-                      Download
-                    </Button>
-                  </div>
-                )}
+        {/* Progress / Actions bar */}
+        <div className="rounded-2xl border bg-muted/20 p-4">
+          {isProcessing ? (
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center justify-between text-sm">
+                <span className="flex items-center gap-2 text-muted-foreground">
+                  <Sparkles className="size-4 animate-pulse text-blue-500" />
+                  Processando com IA...
+                </span>
+                <span className="font-mono font-medium">{progress}%</span>
               </div>
-            </Card>
+              <Progress value={progress} className="h-1.5" />
+            </div>
+          ) : (
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={reset}>
+                <Trash2 className="size-3.5" />
+                Nova imagem
+              </Button>
+              <div className="flex-1" />
+              <Button variant="outline" size="sm" onClick={copyImage} disabled={!processedImage}>
+                <Copy className="size-3.5" />
+                Copiar
+              </Button>
+              <Button size="sm" onClick={downloadImage} disabled={!processedImage}>
+                <Download className="size-3.5" />
+                Baixar
+              </Button>
+            </div>
+          )}
+        </div>
 
-            {/* Preview */}
-            <div className="grid md:grid-cols-2 gap-6">
-              <div>
-                <Badge className="mb-2">Original</Badge>
-
-                <div className="relative bg-slate-100 rounded-lg overflow-hidden">
-                  <img
-                    src={originalImage.src}
-                    alt="Original"
-                    className="w-full h-auto"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <Badge className="mb-2">
-                  Sem Fundo
-                  {isProcessing && (
-                    <RefreshCw className="w-3 h-3 ml-2 inline animate-spin" />
-                  )}
-                </Badge>
-
-                <div
-                  ref={processedImageRef}
-                  onMouseMove={handleZoomMove}
-                  onMouseLeave={handleZoomLeave}
-                  className="relative bg-slate-100 rounded-lg overflow-hidden min-h-[200px] flex items-center justify-center cursor-none"
-                  style={{
-                    backgroundImage:
-                      "linear-gradient(45deg, #e2e8f0 25%, transparent 25%), linear-gradient(-45deg, #e2e8f0 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #e2e8f0 75%), linear-gradient(-45deg, transparent 75%, #e2e8f0 75%)",
-                    backgroundSize: "20px 20px",
-                    backgroundPosition: "0 0, 0 10px, 10px -10px, -10px 0px",
-                  }}
-                >
-                  {isProcessing ? (
-                    <Sparkles className="w-8 h-8 text-blue-500 animate-pulse" />
-                  ) : (
-                    processedImage && (
-                      <img
-                        src={processedImage}
-                        alt="Processado"
-                        className="w-full h-auto"
-                      />
-                    )
-                  )}
-
-                  {/* Lupa com zoom */}
-                  {zoomPosition.show &&
-                    processedImage &&
-                    !isProcessing &&
-                    processedImageRef.current && (
-                      <div>
-                        <div
-                          className="absolute z-50 pointer-events-none border-4 border-white shadow-2xl rounded-full overflow-hidden"
-                          style={{
-                            width: "300px",
-                            height: "300px",
-                            left: `${zoomPosition.x - 75}px`,
-                            top: `${zoomPosition.y - 75}px`,
-                            backgroundImage: `url(${processedImage})`,
-                            backgroundSize: `${
-                              processedImageRef.current?.offsetWidth * 3
-                            }px ${
-                              processedImageRef.current?.offsetHeight * 3
-                            }px`,
-                            backgroundPosition: `-${
-                              zoomPosition.x * 3 - 75
-                            }px -${zoomPosition.y * 3 - 75}px`,
-                            backgroundRepeat: "no-repeat",
-                          }}
-                        >
-                          <div className="absolute inset-0 border-2 border-blue-500 rounded-full" />
-                          <div className="absolute top-1/2 left-0 right-0 h-px bg-blue-500" />
-                          <div className="absolute left-1/2 top-0 bottom-0 w-px bg-blue-500" />
-                        </div>
-
-                        <div
-                          className="absolute pointer-events-none border-4 border-white shadow-2xl rounded-full overflow-hidden"
-                          style={{
-                            width: "300px",
-                            height: "300px",
-                            left: `${zoomPosition.x - 75}px`,
-                            top: `${zoomPosition.y - 75}px`,
-                            backgroundColor: "white",
-                            backgroundImage:
-                              "linear-gradient(45deg, #e2e8f0 25%, transparent 25%), linear-gradient(-45deg, #e2e8f0 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #e2e8f0 75%), linear-gradient(-45deg, transparent 75%, #e2e8f0 75%)",
-                            backgroundSize: "20px 20px",
-                            backgroundPosition:
-                              "0 0, 0 10px, 10px -10px, -10px 0px",
-                          }}
-                        />
-                      </div>
-                    )}
-                </div>
-              </div>
+        {/* Before / After */}
+        <div className="grid md:grid-cols-2 gap-4">
+          {/* Original */}
+          <div className="flex flex-col gap-2">
+            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Original</span>
+            <div className="rounded-xl overflow-hidden border bg-muted/30">
+              <img src={originalImage.src} alt="Original" className="w-full h-auto" />
             </div>
           </div>
-        )}
+
+          {/* Result */}
+          <div className="flex flex-col gap-2">
+            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+              Sem fundo
+            </span>
+            <div
+              ref={processedImageRef}
+              onMouseMove={handleZoomMove}
+              onMouseLeave={() => setZoomPosition({ x: 0, y: 0, show: false })}
+              className="relative rounded-xl overflow-hidden border min-h-[200px] flex items-center justify-center cursor-none"
+              style={CHECKERBOARD}
+            >
+              {isProcessing ? (
+                <Sparkles className="size-10 text-blue-500 animate-pulse" />
+              ) : processedImage ? (
+                <img src={processedImage} alt="Sem fundo" className="w-full h-auto" />
+              ) : (
+                <ImageIcon className="size-10 text-muted-foreground/20" />
+              )}
+
+              {/* Magnifier */}
+              {zoomPosition.show && processedImage && !isProcessing && processedImageRef.current && (
+                <>
+                  {/* Checkerboard background layer */}
+                  <div
+                    className="absolute pointer-events-none rounded-full border-4 border-white shadow-2xl overflow-hidden"
+                    style={{
+                      width: 160, height: 160,
+                      left: zoomPosition.x - 80,
+                      top: zoomPosition.y - 80,
+                      zIndex: 10,
+                      ...CHECKERBOARD,
+                    }}
+                  />
+                  {/* Image zoom layer */}
+                  <div
+                    className="absolute pointer-events-none rounded-full border-4 border-white shadow-2xl overflow-hidden"
+                    style={{
+                      width: 160, height: 160,
+                      left: zoomPosition.x - 80,
+                      top: zoomPosition.y - 80,
+                      zIndex: 20,
+                      backgroundImage: `url(${processedImage})`,
+                      backgroundSize: `${processedImageRef.current.offsetWidth * 3}px ${processedImageRef.current.offsetHeight * 3}px`,
+                      backgroundPosition: `-${zoomPosition.x * 3 - 80}px -${zoomPosition.y * 3 - 80}px`,
+                      backgroundRepeat: "no-repeat",
+                    }}
+                  >
+                    <div className="absolute inset-0 rounded-full border-2 border-blue-500/60" />
+                    <div className="absolute top-1/2 left-0 right-0 h-px bg-blue-500/60" />
+                    <div className="absolute left-1/2 top-0 bottom-0 w-px bg-blue-500/60" />
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

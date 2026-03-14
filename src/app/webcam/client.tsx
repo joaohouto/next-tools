@@ -1,5 +1,3 @@
-// @ts-nocheck
-
 "use client";
 
 import { useEffect, useRef, useState } from "react";
@@ -16,18 +14,18 @@ import { Badge } from "@/components/ui/badge";
 import { Camera, Download, Info, FlipHorizontal } from "lucide-react";
 
 export default function WebcamPage() {
-  const videoRef = useRef(null);
-  const canvasRef = useRef(null);
-  const audioCanvasRef = useRef(null);
-  const [devices, setDevices] = useState([]);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const audioCanvasRef = useRef<HTMLCanvasElement>(null);
+  const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
   const [selectedDevice, setSelectedDevice] = useState("");
-  const [deviceInfo, setDeviceInfo] = useState(null);
-  const [capturedImage, setCapturedImage] = useState(null);
+  const [deviceInfo, setDeviceInfo] = useState<MediaTrackSettings | null>(null);
+  const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [showInfo, setShowInfo] = useState(true);
   const [isMirrored, setIsMirrored] = useState(false);
-  const [audioContext, setAudioContext] = useState(null);
-  const [analyser, setAnalyser] = useState(null);
-  const animationFrameRef = useRef(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const [analyser, setAnalyser] = useState<AnalyserNode | null>(null);
+  const animationFrameRef = useRef<number | null>(null);
 
   useEffect(() => {
     const getDevicesAndPermissions = async () => {
@@ -57,63 +55,67 @@ export default function WebcamPage() {
   }, []);
 
   useEffect(() => {
-    if (selectedDevice) {
-      const startStream = async () => {
-        try {
-          const stream = await navigator.mediaDevices.getUserMedia({
-            video: {
-              deviceId: selectedDevice,
-              width: { ideal: 1920 },
-              height: { ideal: 1080 },
-            },
-            audio: true,
-          });
+    if (!selectedDevice) return;
 
-          if (videoRef.current) {
-            videoRef.current.srcObject = stream;
-          }
+    let currentStream: MediaStream | null = null;
 
-          const videoTrack = stream.getVideoTracks()[0];
-          const settings = videoTrack.getSettings();
-          setDeviceInfo(settings);
+    const startStream = async () => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            deviceId: selectedDevice,
+            width: { ideal: 1920 },
+            height: { ideal: 1080 },
+          },
+          audio: true,
+        });
 
-          // Configurar análise de áudio
-          const audioCtx = new (window.AudioContext ||
-            window.webkitAudioContext)();
-          const analyserNode = audioCtx.createAnalyser();
-          analyserNode.fftSize = 256;
+        currentStream = stream;
 
-          const source = audioCtx.createMediaStreamSource(stream);
-          source.connect(analyserNode);
-
-          setAudioContext(audioCtx);
-          setAnalyser(analyserNode);
-        } catch (err) {
-          console.error("Error starting stream:", err);
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
         }
-      };
 
-      startStream();
+        const videoTrack = stream.getVideoTracks()[0];
+        setDeviceInfo(videoTrack.getSettings());
 
-      return () => {
-        if (videoRef.current && videoRef.current.srcObject) {
-          const stream = videoRef.current.srcObject;
-          stream.getTracks().forEach((track) => track.stop());
-        }
-        if (audioContext) {
-          audioContext.close();
-        }
-        if (animationFrameRef.current) {
-          cancelAnimationFrame(animationFrameRef.current);
-        }
-      };
-    }
+        // Configurar análise de áudio
+        const AudioCtx = window.AudioContext || (window as typeof window & { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+        const audioCtx = new AudioCtx();
+        const analyserNode = audioCtx.createAnalyser();
+        analyserNode.fftSize = 256;
+
+        const source = audioCtx.createMediaStreamSource(stream);
+        source.connect(analyserNode);
+
+        audioContextRef.current = audioCtx;
+        setAnalyser(analyserNode);
+      } catch (err) {
+        console.error("Error starting stream:", err);
+      }
+    };
+
+    startStream();
+
+    return () => {
+      if (currentStream) {
+        currentStream.getTracks().forEach((track) => track.stop());
+      }
+      if (audioContextRef.current) {
+        audioContextRef.current.close();
+        audioContextRef.current = null;
+      }
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+    };
   }, [selectedDevice]);
 
   useEffect(() => {
     if (analyser && audioCanvasRef.current && showInfo) {
       const canvas = audioCanvasRef.current;
       const ctx = canvas.getContext("2d");
+      if (!ctx) return;
       const bufferLength = analyser.frequencyBinCount;
       const dataArray = new Uint8Array(bufferLength);
 
@@ -166,8 +168,8 @@ export default function WebcamPage() {
       canvas.height = video.videoHeight;
 
       const ctx = canvas.getContext("2d");
+      if (!ctx) return;
 
-      // Não aplicar espelhamento na foto capturada
       ctx.drawImage(video, 0, 0);
 
       const imageData = canvas.toDataURL("image/png");
@@ -267,9 +269,9 @@ export default function WebcamPage() {
                 <SelectValue placeholder="Selecione uma câmera" />
               </SelectTrigger>
               <SelectContent>
-                {devices.map((device) => (
+                {devices.map((device, index) => (
                   <SelectItem key={device.deviceId} value={device.deviceId}>
-                    {device.label || `Câmera ${devices.indexOf(device) + 1}`}
+                    {device.label || `Câmera ${index + 1}`}
                   </SelectItem>
                 ))}
               </SelectContent>

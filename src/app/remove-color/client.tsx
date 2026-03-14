@@ -104,6 +104,7 @@ export default function ColorRemover() {
     if (originalImage) {
       removeBackground(originalImage, debouncedThreshold, targetColor);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debouncedThreshold]);
 
   const handleColorChange = (e: React.ChangeEvent<HTMLInputElement>) => {

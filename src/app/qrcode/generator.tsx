@@ -6,39 +6,31 @@ import { Copy, Download, QrCode } from "lucide-react";
 import { copyQRCode, exportQRCode } from "@/lib/export-image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { ColorPicker } from "@/components/color-picker";
-import { CardAnimatedBorder } from "@/components/card-animated-border";
 import { useIsMobile } from "@/hooks/use-mobile";
+
+const SIZE_OPTIONS = [128, 256, 512, 1024];
+const FORMAT_OPTIONS = ["PNG", "SVG"];
 
 export function QRCodeGenerator() {
   const [text, setText] = useState("");
-
   const [config, setConfig] = useState({
     bgColor: "#FFFFFF",
     fgColor: "#000000",
-    size: 300,
+    size: 512,
     includeMargin: true,
-    customLogo: false,
     format: "png",
   });
 
-  const imageRef = useRef(null);
+  const imageRef = useRef<HTMLDivElement>(null);
   const isMobile = useIsMobile();
 
   return (
-    <div className="grid md:grid-cols-2 grid-cols-1 content-center gap-4">
-      <div className="flex flex-col justify-center items-center">
+    <div className="flex flex-col items-center gap-6">
+      {/* QR preview */}
+      <div className="relative flex items-center justify-center rounded-2xl border bg-muted/30 p-6">
         {text ? (
-          <div className="w-[200px] h-[200px]" ref={imageRef}>
+          <div ref={imageRef}>
             <QRCodeSVG
               value={text}
               size={200}
@@ -48,96 +40,115 @@ export function QRCodeGenerator() {
             />
           </div>
         ) : (
-          <CardAnimatedBorder className="w-[200px] h-[200px] text-neutral-300 dark:text-neutral-700 flex flex-col justify-center items-center">
-            <QrCode size={148} />
-          </CardAnimatedBorder>
+          <div className="flex h-[200px] w-[200px] items-center justify-center text-muted-foreground/30">
+            <QrCode size={120} strokeWidth={1} />
+          </div>
         )}
-
-        <div className="grid grid-cols-2 gap-2 my-4">
-          <Button
-            disabled={!text}
-            onClick={() => {
-              copyQRCode(imageRef.current, config);
-            }}
-          >
-            <Copy size={18} />
-            Copiar
-          </Button>
-
-          <Button
-            disabled={!text}
-            onClick={() => {
-              exportQRCode(imageRef.current, config, `qrcode-${text}`);
-            }}
-          >
-            <Download size={18} />
-            Baixar
-          </Button>
-        </div>
-
-        <Input
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          placeholder="Seu link, texto, etc."
-          autoFocus={!isMobile}
-        />
       </div>
 
-      <div className="flex flex-col space-y-2">
-        <Label>Configurações</Label>
+      {/* Text input */}
+      <Input
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        placeholder="URL, texto, contato..."
+        autoFocus={!isMobile}
+        className="text-center"
+      />
 
-        <div className="flex items-center space-x-2">
-          <Switch
-            id="include-margin"
-            checked={config.includeMargin}
-            onCheckedChange={(value) => {
-              setConfig({ ...config, includeMargin: value });
-            }}
-          />
-          <Label htmlFor="include-margin">Adicionar margem</Label>
+      {/* Settings */}
+      <div className="w-full rounded-xl border bg-muted/20 p-4 flex flex-col gap-4">
+        {/* Colors */}
+        <div className="grid grid-cols-2 gap-3">
+          <div className="flex flex-col gap-1.5">
+            <span className="text-xs text-muted-foreground">Cor do QR</span>
+            <ColorPicker
+              color={config.fgColor}
+              setColor={(c) => setConfig({ ...config, fgColor: c })}
+            />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <span className="text-xs text-muted-foreground">Cor de fundo</span>
+            <ColorPicker
+              color={config.bgColor}
+              setColor={(c) => setConfig({ ...config, bgColor: c })}
+            />
+          </div>
         </div>
 
-        <Label>Formato</Label>
-        <Select
-          value={config.format}
-          onValueChange={(value) => setConfig({ ...config, format: value })}
+        {/* Size */}
+        <div className="flex flex-col gap-1.5">
+          <span className="text-xs text-muted-foreground">Tamanho (px)</span>
+          <div className="grid grid-cols-4 gap-1.5">
+            {SIZE_OPTIONS.map((s) => (
+              <button
+                key={s}
+                onClick={() => setConfig({ ...config, size: s })}
+                className={`rounded-lg border py-1.5 text-xs font-medium transition-all active:scale-95 ${
+                  config.size === s
+                    ? "border-primary/40 bg-primary/10 text-foreground"
+                    : "border-border bg-background text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {s}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Format + Margin */}
+        <div className="flex items-center gap-3">
+          <div className="flex flex-col gap-1.5 flex-1">
+            <span className="text-xs text-muted-foreground">Formato</span>
+            <div className="grid grid-cols-2 gap-1.5">
+              {FORMAT_OPTIONS.map((f) => (
+                <button
+                  key={f}
+                  onClick={() => setConfig({ ...config, format: f.toLowerCase() })}
+                  className={`rounded-lg border py-1.5 text-xs font-medium transition-all active:scale-95 ${
+                    config.format === f.toLowerCase()
+                      ? "border-primary/40 bg-primary/10 text-foreground"
+                      : "border-border bg-background text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {f}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-1.5 flex-1">
+            <span className="text-xs text-muted-foreground">Margem</span>
+            <button
+              onClick={() => setConfig({ ...config, includeMargin: !config.includeMargin })}
+              className={`rounded-lg border py-1.5 text-xs font-medium transition-all active:scale-95 ${
+                config.includeMargin
+                  ? "border-primary/40 bg-primary/10 text-foreground"
+                  : "border-border bg-background text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {config.includeMargin ? "Com margem" : "Sem margem"}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Actions */}
+      <div className="grid w-full grid-cols-2 gap-2">
+        <Button
+          variant="outline"
+          disabled={!text}
+          onClick={() => copyQRCode(imageRef.current, config)}
         >
-          <SelectTrigger>
-            <SelectValue placeholder="Selecione um formato de imagem">
-              {config.format}
-            </SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="png">PNG</SelectItem>
-            <SelectItem value="svg">SVG</SelectItem>
-          </SelectContent>
-        </Select>
-
-        <Label>Tamanho (largua x altura - px)</Label>
-        <Input
-          type="number"
-          value={config.size}
-          min={100}
-          onChange={(e) => {
-            setConfig({ ...config, size: parseInt(e.target.value) });
-          }}
-        />
-
-        <Label>Cor de destaque</Label>
-        <ColorPicker
-          color={config.fgColor}
-          setColor={(color) => {
-            setConfig({ ...config, fgColor: color });
-          }}
-        />
-
-        <Label>Cor de fundo</Label>
-        <ColorPicker
-          color={config.bgColor}
-          setColor={(color) => {
-            setConfig({ ...config, bgColor: color });
-          }}
-        />
+          <Copy className="size-4" />
+          Copiar
+        </Button>
+        <Button
+          disabled={!text}
+          onClick={() => exportQRCode(imageRef.current, config, `qrcode-${text}`)}
+        >
+          <Download className="size-4" />
+          Baixar
+        </Button>
       </div>
     </div>
   );
