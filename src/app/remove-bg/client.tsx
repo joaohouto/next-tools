@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { Download, RefreshCw, Trash2, Sparkles, Copy } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -19,6 +19,15 @@ export default function AIBackgroundRemover() {
   const [progress, setProgress] = useState(0);
   const [zoomPosition, setZoomPosition] = useState({ x: 0, y: 0, show: false });
   const processedImageRef = useRef<HTMLDivElement | null>(null);
+
+  // Revoke blob URL on unmount to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      if (processedImage) {
+        URL.revokeObjectURL(processedImage);
+      }
+    };
+  }, [processedImage]);
 
   const handleFilesUpload = (files: File[]) => {
     const file = files[0];

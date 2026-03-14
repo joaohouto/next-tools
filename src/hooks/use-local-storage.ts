@@ -130,30 +130,6 @@ export function useLocalStorage<T>(
 }
 
 /**
- * Hook para múltiplos valores do localStorage com sincronização
- * @param keys - Objeto com chaves e valores iniciais
- * @param options - Opções de configuração
- * @returns Objeto com getters e setters para cada chave
- */
-export function useLocalStorageMultiple<T extends Record<string, unknown>>(
-  keys: T,
-  options: UseLocalStorageOptions = {},
-): Record<keyof T, [unknown, Dispatch<SetStateAction<unknown>>]> {
-  const result: Record<string, [unknown, Dispatch<SetStateAction<unknown>>]> =
-    {};
-
-  for (const [key, initialValue] of Object.entries(keys)) {
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-    result[key] = useLocalStorage(key, initialValue, options);
-  }
-
-  return result as Record<
-    keyof T,
-    [unknown, Dispatch<SetStateAction<unknown>>]
-  >;
-}
-
-/**
  * Hook para remover um item do localStorage
  */
 export function useLocalStorageRemove() {

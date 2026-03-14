@@ -3,42 +3,66 @@
 import { CardAnimatedBorder } from "@/components/card-animated-border";
 import ImageDropzone from "@/components/image-dropzone";
 import { ScanText } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Tesseract from "tesseract.js";
+import { toast } from "sonner";
 
 export default function OcrPage() {
   const [image, setImage] = useState<string | null>(null);
   const [text, setText] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(false);
+  const objectUrlRef = useRef<string | null>(null);
 
   useEffect(() => {
-    if (image) {
-      setLoading(true);
+    if (!image) return;
 
-      Tesseract.recognize(image, "por", {
-        logger: (m) => console.log(m),
-      }).then(({ data: { text } }) => {
+    setLoading(true);
+    setText("");
+
+    Tesseract.recognize(image, "por")
+      .then(({ data: { text } }) => {
         setText(text);
+      })
+      .catch((err) => {
+        console.error("Erro OCR:", err);
+        toast.error("Erro ao processar imagem. Tente novamente.");
+      })
+      .finally(() => {
         setLoading(false);
       });
-    }
   }, [image]);
+
+  // Revogar object URL ao desmontar ou trocar imagem
+  useEffect(() => {
+    return () => {
+      if (objectUrlRef.current) {
+        URL.revokeObjectURL(objectUrlRef.current);
+      }
+    };
+  }, []);
+
+  const handleUpload = (files: File[]) => {
+    if (files.length === 0) return;
+
+    if (objectUrlRef.current) {
+      URL.revokeObjectURL(objectUrlRef.current);
+    }
+
+    const url = URL.createObjectURL(files[0]);
+    objectUrlRef.current = url;
+    setImage(url);
+  };
 
   return (
     <div className="p-8 w-full min-h-screen">
       <div className="w-full md:max-w-[680px] mx-auto flex flex-col content-center gap-4">
         <ImageDropzone
           isLoading={loading}
-          onUpload={(files) => {
-            if (files.length > 0) {
-              const imageUrl = URL.createObjectURL(files[0]);
-              setImage(imageUrl);
-            }
-          }}
+          onUpload={handleUpload}
         />
 
         <div className="font-mono text-justify text-sm p-4 bg-muted rounded-xl w-full">
-          {text || "Nenhum texto econtrado ainda."}
+          {text || "Nenhum texto encontrado ainda."}
         </div>
 
         <div className="flex flex-col">

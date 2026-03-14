@@ -37,9 +37,8 @@ export default function Page() {
   }, [config]);
 
   const createPass = () => {
-    const pass = generatePassword(config);
-
-    setPass(pass);
+    const generated = generatePassword(config);
+    setPass(generated || "...");
   };
   return (
     <div className="max-w-screen-sm min-h-screen mx-auto p-8 flex flex-col items-center justify-center space-y-4">

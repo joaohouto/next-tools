@@ -1,5 +1,3 @@
-// @ts-nocheck
-
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
@@ -18,7 +16,7 @@ export default function ImageVectorizer() {
   const [originalImage, setOriginalImage] = useState<HTMLImageElement | null>(
     null
   );
-  const [vectorizedSVG, setVectorizedSVG] = useState(null);
+  const [vectorizedSVG, setVectorizedSVG] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [threshold, setThreshold] = useState(128);
   const debouncedThreshold = useDebounce(threshold, 500);
@@ -33,17 +31,19 @@ export default function ImageVectorizer() {
   const processFile = (file: File) => {
     const reader = new FileReader();
     reader.onload = (e) => {
+      const result = e.target?.result;
+      if (typeof result !== "string") return;
       const img = new Image();
       img.onload = () => {
         setOriginalImage(img);
-        vectorizeImage(e.target.result);
+        vectorizeImage(result, threshold);
       };
-      img.src = e.target.result;
+      img.src = result;
     };
     reader.readAsDataURL(file);
   };
 
-  const vectorizeImage = async (imageData) => {
+  const vectorizeImage = async (imageData: string, thresholdValue: number) => {
     setIsProcessing(true);
 
     try {
@@ -53,14 +53,14 @@ export default function ImageVectorizer() {
       const buffer = Buffer.from(arrayBuffer);
 
       const params = {
-        threshold: threshold,
+        threshold: thresholdValue,
         color: "#000000",
         background: "transparent",
         optTolerance: 0.2,
         turdSize: 2,
       };
 
-      Potrace.trace(buffer, params, (err, svg) => {
+      Potrace.trace(buffer, params, (err: Error | null, svg: string) => {
         if (err) {
           console.error("Erro ao vetorizar:", err);
           toast.error("Erro ao processar imagem. Tente outra imagem.");
@@ -76,20 +76,20 @@ export default function ImageVectorizer() {
     }
   };
 
-  const handleThresholdChange = (e) => {
-    const newThreshold = parseInt(e.target.value);
-    setThreshold(newThreshold);
+  const handleThresholdChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setThreshold(parseInt(e.target.value, 10));
   };
 
-  const handleThresholdInputChange = (e) => {
-    const value = e.target.value;
-    const newThreshold = Math.max(0, Math.min(255, parseInt(value) || 0));
+  const handleThresholdInputChange = (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const newThreshold = Math.max(0, Math.min(255, parseInt(e.target.value) || 0));
     setThreshold(newThreshold);
   };
 
   useEffect(() => {
     if (originalImage) {
-      vectorizeImage(originalImage.src);
+      vectorizeImage(originalImage.src, debouncedThreshold);
     }
   }, [debouncedThreshold]);
 
