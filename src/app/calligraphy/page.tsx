@@ -31,6 +31,7 @@ import {
   RotateCcw,
   Info,
 } from "lucide-react";
+import { PageHeader } from "@/components/page-header";
 import { toast } from "sonner";
 
 // ---------------------------------------------------------------------------
@@ -265,24 +266,19 @@ export default function CalligraphyStudio() {
         }}
       />
 
-      <div className="min-h-screen p-4 bg-slate-50 dark:bg-slate-950">
-        <div className="max-w-7xl mx-auto py-8 space-y-6">
-          {/* CABEÇALHO */}
-          <div className="flex items-center justify-between print:hidden">
-            <div>
-              <h1 className="text-2xl font-bold flex items-center gap-2">
-                <Type className="w-6 h-6 text-primary" />
-                Estúdio de Caligrafia
-              </h1>
-              <p className="text-muted-foreground text-sm mt-1">
-                Folhas de treino com medidas calibradas para impressão A4.
-              </p>
-            </div>
-            <Button onClick={handlePrint} size="lg" className="gap-2">
-              <Printer className="w-4 h-4" />
-              Imprimir / Salvar PDF
-            </Button>
-          </div>
+      <div className="min-h-screen p-6 bg-neutral-100 dark:bg-neutral-900">
+        <div className="max-w-7xl mx-auto space-y-6">
+          <PageHeader
+            title="Estúdio de Caligrafia"
+            description="Folhas de treino com medidas calibradas para impressão A4."
+            icon={<Type className="w-5 h-5" />}
+            actions={
+              <Button onClick={handlePrint} size="sm" className="gap-2">
+                <Printer className="w-4 h-4" />
+                Imprimir / Salvar PDF
+              </Button>
+            }
+          />
 
           <div className="grid lg:grid-cols-12 gap-6 print:block">
             {/* ============================================================

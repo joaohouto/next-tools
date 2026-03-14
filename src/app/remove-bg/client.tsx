@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
-import { Download, Trash2, Sparkles, Copy, ImageIcon } from "lucide-react";
+import { Download, Trash2, Sparkles, Copy, ImageIcon, BookImage } from "lucide-react";
+import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import FileDropzone from "@/components/file-dropzone";
@@ -101,28 +102,35 @@ export default function AIBackgroundRemover() {
     setZoomPosition({ x: e.clientX - rect.left, y: e.clientY - rect.top, show: true });
   };
 
+  const header = (
+    <PageHeader
+      title="Remover Fundo"
+      description="Processado no seu dispositivo, sem enviar para servidores."
+      icon={<BookImage className="w-5 h-5" />}
+    />
+  );
+
   if (!originalImage) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-6">
-        <div className="w-full max-w-sm flex flex-col gap-4">
-          <div className="text-center">
-            <p className="text-sm text-muted-foreground">
-              Processado no seu dispositivo, sem enviar para servidores.
-            </p>
+      <div className="min-h-screen bg-neutral-100 dark:bg-neutral-900 flex flex-col items-center p-6 gap-6">
+        <div className="w-full max-w-sm">{header}</div>
+        <div className="flex-1 flex items-center justify-center w-full">
+          <div className="w-full max-w-sm">
+            <FileDropzone
+              onUpload={(files) => files[0] && processFile(files[0])}
+              accept="image/*"
+              isLoading={isProcessing}
+            />
           </div>
-          <FileDropzone
-            onUpload={(files) => files[0] && processFile(files[0])}
-            accept="image/*"
-            isLoading={isProcessing}
-          />
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen p-6">
+    <div className="min-h-screen bg-neutral-100 dark:bg-neutral-900 p-6">
       <div className="max-w-3xl mx-auto flex flex-col gap-6">
+        {header}
 
         {/* Progress / Actions bar */}
         <div className="rounded-2xl border bg-muted/20 p-4">

@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import emojiList from "./emoji-list.json";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
-import { Search } from "lucide-react";
+import { Search, Smile } from "lucide-react";
+import { PageHeader } from "@/components/page-header";
 
 export default function EmojiSearch() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -31,7 +32,13 @@ export default function EmojiSearch() {
   }, [searchTerm]);
 
   return (
-    <div className="px-4 py-8 max-w-xl mx-auto">
+    <div className="min-h-screen bg-neutral-100 dark:bg-neutral-900 px-4 py-6">
+      <div className="max-w-xl mx-auto flex flex-col gap-6">
+        <PageHeader
+          title="Emoji"
+          description="Pesquise e copie emojis."
+          icon={<Smile className="w-5 h-5" />}
+        />
       <div className="relative">
         <Search className="absolute text-muted-foreground left-2.5 top-2.5 size-4" />
 
@@ -68,6 +75,7 @@ export default function EmojiSearch() {
           </span>
         )}
       </div>
+    </div>
     </div>
   );
 }

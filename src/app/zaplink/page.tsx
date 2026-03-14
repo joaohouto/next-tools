@@ -19,7 +19,8 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
-import { Copy, Plus, X, Edit, Settings, ArrowUpRight } from "lucide-react";
+import { Copy, Plus, X, Edit, Settings, ArrowUpRight, AppWindow } from "lucide-react";
+import { PageHeader } from "@/components/page-header";
 import { Label } from "@/components/ui/label";
 import { useHotkeys } from "react-hotkeys-hook";
 import { toast } from "sonner";
@@ -231,13 +232,14 @@ export default function ZapLink() {
   );
 
   return (
-    <div className="min-h-screen p-4">
-      <div className="max-w-6xl mx-auto py-8">
-        <div className="text-center mb-8">
-          <h1 className="text-xl font-bold mb-2">ZapLink</h1>
-          <p className="text-muted-foreground text-sm">
-            Gerador de links WhatsApp com templates
-          </p>
+    <div className="min-h-screen bg-neutral-100 dark:bg-neutral-900 p-6">
+      <div className="max-w-6xl mx-auto">
+        <div className="mb-6">
+          <PageHeader
+            title="ZapLink"
+            description="Gerador de links WhatsApp com templates."
+            icon={<AppWindow className="w-5 h-5" />}
+          />
         </div>
 
         <div className="grid lg:grid-cols-2 gap-6">
