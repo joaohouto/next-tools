@@ -14,6 +14,7 @@ import {
   PenTool,
   AppWindow,
   Signature,
+  NotebookPen,
 } from "lucide-react";
 
 export const UNORDERED_LIST = [
@@ -98,6 +99,11 @@ export const UNORDERED_LIST = [
     title: "Caligrafia",
     path: "/calligraphy",
     icon: <Signature />,
+  },
+  {
+    title: "Folhas Pautadas",
+    path: "/line-sheet",
+    icon: <NotebookPen />,
   },
 ];
 
