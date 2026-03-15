@@ -116,7 +116,9 @@ export function IconSettings({
               className="h-[140px] font-mono text-xs resize-none"
               value={config.customSVGCode}
               placeholder={`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">...</svg>`}
-              onChange={(e) => onConfigChange({ customSVGCode: e.target.value })}
+              onChange={(e) =>
+                onConfigChange({ customSVGCode: e.target.value })
+              }
             />
           </div>
         )}
@@ -131,6 +133,7 @@ export function IconSettings({
           <ColorPicker
             color={config.fgColor}
             setColor={(color) => onConfigChange({ fgColor: color })}
+            showGradientTab={false}
           />
         </div>
 

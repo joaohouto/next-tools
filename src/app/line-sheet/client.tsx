@@ -81,15 +81,13 @@ interface Config {
 // ─────────────────────────────────────────────
 // CONSTANTS
 // ─────────────────────────────────────────────
-const PAPER_SIZES: Record<
-  PaperSize,
-  { w: number; h: number; label: string }
-> = {
-  a4: { w: 210, h: 297, label: "A4 (210 × 297mm)" },
-  a5: { w: 148, h: 210, label: "A5 (148 × 210mm)" },
-  letter: { w: 215.9, h: 279.4, label: 'Letter (8.5 × 11")' },
-  "half-letter": { w: 139.7, h: 215.9, label: 'Half Letter (5.5 × 8.5")' },
-};
+const PAPER_SIZES: Record<PaperSize, { w: number; h: number; label: string }> =
+  {
+    a4: { w: 210, h: 297, label: "A4 (210 × 297mm)" },
+    a5: { w: 148, h: 210, label: "A5 (148 × 210mm)" },
+    letter: { w: 215.9, h: 279.4, label: 'Letter (8.5 × 11")' },
+    "half-letter": { w: 139.7, h: 215.9, label: 'Half Letter (5.5 × 8.5")' },
+  };
 
 const LINE_TYPES: {
   value: LineType;
@@ -211,7 +209,7 @@ function clipSegment(
   xMin: number,
   yMin: number,
   xMax: number,
-  yMax: number
+  yMax: number,
 ): [number, number, number, number] | null {
   const dx = bx - ax;
   const dy = by - ay;
@@ -274,7 +272,7 @@ function renderSVGContent(
   config: Config,
   widthMm: number,
   heightMm: number,
-  pageNum: number
+  pageNum: number,
 ): React.ReactNode {
   const m = getMargins(config, pageNum);
   const cx1 = m.left;
@@ -300,7 +298,7 @@ function renderSVGContent(
           y2={y}
           stroke={stroke}
           strokeWidth={sw}
-        />
+        />,
       );
     }
   } else if (config.lineType === "dotted") {
@@ -313,7 +311,7 @@ function renderSVGContent(
             cy={y}
             r={0.3}
             fill={stroke}
-          />
+          />,
         );
       }
     }
@@ -328,7 +326,7 @@ function renderSVGContent(
           y2={y}
           stroke={stroke}
           strokeWidth={sw}
-        />
+        />,
       );
     }
     for (let x = cx1 + s; x <= cx2 + 0.001; x += s) {
@@ -341,7 +339,7 @@ function renderSVGContent(
           y2={cy2}
           stroke={stroke}
           strokeWidth={sw}
-        />
+        />,
       );
     }
   } else if (config.lineType === "isometric") {
@@ -361,16 +359,12 @@ function renderSVGContent(
           y2={y}
           stroke={stroke}
           strokeWidth={sw}
-        />
+        />,
       );
     }
 
     // Right-leaning diagonals (↘): y = cy1 + (x - x0) * slope
-    for (
-      let x0 = cx1 - ext;
-      x0 <= cx2 + diagStep;
-      x0 += diagStep
-    ) {
+    for (let x0 = cx1 - ext; x0 <= cx2 + diagStep; x0 += diagStep) {
       lineEls.push(
         <line
           key={`dr${x0.toFixed(2)}`}
@@ -380,16 +374,12 @@ function renderSVGContent(
           y2={cy1 + ext * slope}
           stroke={stroke}
           strokeWidth={sw}
-        />
+        />,
       );
     }
 
     // Left-leaning diagonals (↙): y = cy1 + (x0 - x) * slope
-    for (
-      let x0 = cx1 - diagStep;
-      x0 <= cx2 + ext;
-      x0 += diagStep
-    ) {
+    for (let x0 = cx1 - diagStep; x0 <= cx2 + ext; x0 += diagStep) {
       lineEls.push(
         <line
           key={`dl${x0.toFixed(2)}`}
@@ -399,7 +389,7 @@ function renderSVGContent(
           y2={cy1 + ext * slope}
           stroke={stroke}
           strokeWidth={sw}
-        />
+        />,
       );
     }
   } else if (config.lineType === "cornell") {
@@ -420,7 +410,7 @@ function renderSVGContent(
           y2={y}
           stroke={stroke}
           strokeWidth={sw}
-        />
+        />,
       );
     }
 
@@ -434,7 +424,7 @@ function renderSVGContent(
         y2={summaryY}
         stroke={stroke}
         strokeWidth={structSw}
-      />
+      />,
     );
 
     // Summary area horizontal line
@@ -447,11 +437,14 @@ function renderSVGContent(
         y2={summaryY}
         stroke={stroke}
         strokeWidth={structSw}
-      />
+      />,
     );
 
     // Cornell labels (faint)
-    const labelColor = hexToRgba(config.lineColor, (config.lineOpacity / 100) * 0.45);
+    const labelColor = hexToRgba(
+      config.lineColor,
+      (config.lineOpacity / 100) * 0.45,
+    );
     lineEls.push(
       <text
         key="label-cue"
@@ -462,7 +455,7 @@ function renderSVGContent(
         fontFamily="sans-serif"
       >
         Palavras-chave
-      </text>
+      </text>,
     );
     lineEls.push(
       <text
@@ -474,7 +467,7 @@ function renderSVGContent(
         fontFamily="sans-serif"
       >
         Notas
-      </text>
+      </text>,
     );
     lineEls.push(
       <text
@@ -486,7 +479,7 @@ function renderSVGContent(
         fontFamily="sans-serif"
       >
         Resumo
-      </text>
+      </text>,
     );
   } else if (config.lineType === "music") {
     const staffInner = 2; // mm between lines within a staff
@@ -504,7 +497,7 @@ function renderSVGContent(
             y2={y}
             stroke={stroke}
             strokeWidth={sw}
-          />
+          />,
         );
       }
       y0 += staffH + s;
@@ -517,7 +510,10 @@ function renderSVGContent(
     config.lineType === "grid" ||
     config.lineType === "cornell";
 
-  const textColor = hexToRgba(config.lineColor, (config.lineOpacity / 100) * 0.55);
+  const textColor = hexToRgba(
+    config.lineColor,
+    (config.lineOpacity / 100) * 0.55,
+  );
   const textFontSize = 3.2;
 
   // Header/footer positions: only render if there's margin space; clamp to safe zone
@@ -548,7 +544,7 @@ function renderSVGContent(
           width={cx2 - cx1}
           height={cy2 - cy1}
           stroke={stroke}
-          strokeWidth={sw * 2}
+          strokeWidth={sw * 1}
           fill="none"
         />
       )}
@@ -640,7 +636,7 @@ async function exportPDF(config: Config): Promise<void> {
       ay: number,
       bx: number,
       by: number,
-      t = thickness
+      t = thickness,
     ) => {
       page.drawLine({
         start: { x: ax, y: ay },
@@ -704,7 +700,7 @@ async function exportPDF(config: Config): Promise<void> {
             lPt,
             botPt,
             rPt,
-            topPt
+            topPt,
           );
           if (seg) dl(seg[0], seg[1], seg[2], seg[3]);
         }
@@ -723,7 +719,7 @@ async function exportPDF(config: Config): Promise<void> {
             lPt,
             botPt,
             rPt,
-            topPt
+            topPt,
           );
           if (seg) dl(seg[0], seg[1], seg[2], seg[3]);
         }
@@ -1157,13 +1153,15 @@ function SettingsPanel({
                             onChange({
                               [key]: Math.max(
                                 0,
-                                Math.min(50, Number(e.target.value))
+                                Math.min(50, Number(e.target.value)),
                               ),
                             })
                           }
                           className="w-12 text-xs font-mono text-primary text-right bg-background border border-border rounded px-1 py-0.5 focus:outline-none focus:ring-1 focus:ring-primary"
                         />
-                        <span className="text-xs text-muted-foreground">mm</span>
+                        <span className="text-xs text-muted-foreground">
+                          mm
+                        </span>
                       </div>
                     </div>
                     <Slider
@@ -1336,7 +1334,7 @@ export default function LineSheetGenerator() {
 
   const { widthMm, heightMm } = useMemo(
     () => getPageDimensions(config),
-    [config.paperSize, config.orientation]
+    [config.paperSize, config.orientation],
   );
 
   const updateConfig = useCallback((updates: Partial<Config>) => {
@@ -1376,7 +1374,8 @@ export default function LineSheetGenerator() {
                 Gerador de Folhas Pautadas
               </h1>
               <p className="text-muted-foreground text-sm mt-1">
-                Crie folhas personalizadas para cadernos, diários e planejadores.
+                Crie folhas personalizadas para cadernos, diários e
+                planejadores.
               </p>
             </div>
             <div className="flex gap-2">
@@ -1385,10 +1384,9 @@ export default function LineSheetGenerator() {
                   <Button
                     onClick={handleExportPDF}
                     variant="outline"
-                    className="gap-2"
                     disabled={exporting}
                   >
-                    <FileDown className="w-4 h-4" />
+                    <FileDown />
                     {exporting ? "Gerando..." : "Exportar PDF"}
                   </Button>
                 </TooltipTrigger>
@@ -1396,7 +1394,8 @@ export default function LineSheetGenerator() {
                   Gera um PDF vetorial com todas as páginas
                 </TooltipContent>
               </Tooltip>
-              <Button onClick={handlePrint} size="lg" className="gap-2">
+
+              <Button onClick={handlePrint} className="gap-2">
                 <Printer className="w-4 h-4" />
                 Imprimir
               </Button>
@@ -1426,15 +1425,13 @@ export default function LineSheetGenerator() {
                   </Badge>
                 )}
                 <span className="text-xs text-muted-foreground ml-auto">
-                  {config.pageCount} {config.pageCount === 1 ? "página" : "páginas"}
+                  {config.pageCount}{" "}
+                  {config.pageCount === 1 ? "página" : "páginas"}
                 </span>
               </div>
 
               {/* Pages */}
-              <div
-                id="print-area"
-                className="space-y-4 print:space-y-0"
-              >
+              <div id="print-area" className="space-y-4 print:space-y-0">
                 {Array.from({ length: config.pageCount }, (_, i) => {
                   const pageNum = i + 1;
                   const isOdd = pageNum % 2 === 1;
@@ -1470,9 +1467,9 @@ export default function LineSheetGenerator() {
                 <Info className="w-3.5 h-3.5 mt-0.5 shrink-0" />
                 <span>
                   A visualização é proporcional ao papel real. Use{" "}
-                  <strong>Exportar PDF</strong> para resultado vetorial
-                  preciso, ou <strong>Imprimir</strong> e escolha &quot;Salvar
-                  como PDF&quot; no navegador.
+                  <strong>Exportar PDF</strong> para resultado vetorial preciso,
+                  ou <strong>Imprimir</strong> e escolha &quot;Salvar como
+                  PDF&quot; no navegador.
                 </span>
               </div>
             </div>

@@ -17,7 +17,9 @@ const CHECKERBOARD = {
 };
 
 export default function AIBackgroundRemover() {
-  const [originalImage, setOriginalImage] = useState<HTMLImageElement | null>(null);
+  const [originalImage, setOriginalImage] = useState<HTMLImageElement | null>(
+    null,
+  );
   const [processedImage, setProcessedImage] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -50,7 +52,9 @@ export default function AIBackgroundRemover() {
     setProgress(0);
 
     const progressInterval = setInterval(() => {
-      setProgress((prev) => (prev >= 90 ? (clearInterval(progressInterval), 90) : prev + 10));
+      setProgress((prev) =>
+        prev >= 90 ? (clearInterval(progressInterval), 90) : prev + 10,
+      );
     }, 200);
 
     try {
@@ -80,7 +84,9 @@ export default function AIBackgroundRemover() {
     if (!processedImage) return;
     try {
       const blob = await fetch(processedImage).then((r) => r.blob());
-      await navigator.clipboard.write([new ClipboardItem({ [blob.type]: blob })]);
+      await navigator.clipboard.write([
+        new ClipboardItem({ [blob.type]: blob }),
+      ]);
       toast.success("Imagem copiada!");
     } catch (err) {
       console.error("Erro ao copiar:", err);
@@ -98,7 +104,11 @@ export default function AIBackgroundRemover() {
   const handleZoomMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!processedImageRef.current) return;
     const rect = processedImageRef.current.getBoundingClientRect();
-    setZoomPosition({ x: e.clientX - rect.left, y: e.clientY - rect.top, show: true });
+    setZoomPosition({
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top,
+      show: true,
+    });
   };
 
   if (!originalImage) {
@@ -123,7 +133,6 @@ export default function AIBackgroundRemover() {
   return (
     <div className="min-h-screen p-6">
       <div className="max-w-3xl mx-auto flex flex-col gap-6">
-
         {/* Progress / Actions bar */}
         <div className="rounded-2xl border bg-muted/20 p-4">
           {isProcessing ? (
@@ -144,11 +153,20 @@ export default function AIBackgroundRemover() {
                 Nova imagem
               </Button>
               <div className="flex-1" />
-              <Button variant="outline" size="sm" onClick={copyImage} disabled={!processedImage}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={copyImage}
+                disabled={!processedImage}
+              >
                 <Copy className="size-3.5" />
                 Copiar
               </Button>
-              <Button size="sm" onClick={downloadImage} disabled={!processedImage}>
+              <Button
+                size="sm"
+                onClick={downloadImage}
+                disabled={!processedImage}
+              >
                 <Download className="size-3.5" />
                 Baixar
               </Button>
@@ -160,9 +178,15 @@ export default function AIBackgroundRemover() {
         <div className="grid md:grid-cols-2 gap-4">
           {/* Original */}
           <div className="flex flex-col gap-2">
-            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Original</span>
+            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+              Original
+            </span>
             <div className="rounded-xl overflow-hidden border bg-muted/30">
-              <img src={originalImage.src} alt="Original" className="w-full h-auto" />
+              <img
+                src={originalImage.src}
+                alt="Original"
+                className="w-full h-auto"
+              />
             </div>
           </div>
 
@@ -181,45 +205,54 @@ export default function AIBackgroundRemover() {
               {isProcessing ? (
                 <Sparkles className="size-10 text-blue-500 animate-pulse" />
               ) : processedImage ? (
-                <img src={processedImage} alt="Sem fundo" className="w-full h-auto" />
+                <img
+                  src={processedImage}
+                  alt="Sem fundo"
+                  className="w-full h-auto"
+                />
               ) : (
                 <ImageIcon className="size-10 text-muted-foreground/20" />
               )}
 
               {/* Magnifier */}
-              {zoomPosition.show && processedImage && !isProcessing && processedImageRef.current && (
-                <>
-                  {/* Checkerboard background layer */}
-                  <div
-                    className="absolute pointer-events-none rounded-full border-4 border-white shadow-2xl overflow-hidden"
-                    style={{
-                      width: 160, height: 160,
-                      left: zoomPosition.x - 80,
-                      top: zoomPosition.y - 80,
-                      zIndex: 10,
-                      ...CHECKERBOARD,
-                    }}
-                  />
-                  {/* Image zoom layer */}
-                  <div
-                    className="absolute pointer-events-none rounded-full border-4 border-white shadow-2xl overflow-hidden"
-                    style={{
-                      width: 160, height: 160,
-                      left: zoomPosition.x - 80,
-                      top: zoomPosition.y - 80,
-                      zIndex: 20,
-                      backgroundImage: `url(${processedImage})`,
-                      backgroundSize: `${processedImageRef.current.offsetWidth * 3}px ${processedImageRef.current.offsetHeight * 3}px`,
-                      backgroundPosition: `-${zoomPosition.x * 3 - 80}px -${zoomPosition.y * 3 - 80}px`,
-                      backgroundRepeat: "no-repeat",
-                    }}
-                  >
-                    <div className="absolute inset-0 rounded-full border-2 border-blue-500/60" />
-                    <div className="absolute top-1/2 left-0 right-0 h-px bg-blue-500/60" />
-                    <div className="absolute left-1/2 top-0 bottom-0 w-px bg-blue-500/60" />
-                  </div>
-                </>
-              )}
+              {zoomPosition.show &&
+                processedImage &&
+                !isProcessing &&
+                processedImageRef.current && (
+                  <>
+                    {/* Checkerboard background layer */}
+                    <div
+                      className="absolute pointer-events-none rounded-full border-4 border-white shadow-2xl overflow-hidden"
+                      style={{
+                        width: 160,
+                        height: 160,
+                        left: zoomPosition.x - 80,
+                        top: zoomPosition.y - 80,
+                        zIndex: 10,
+                        ...CHECKERBOARD,
+                      }}
+                    />
+                    {/* Image zoom layer */}
+                    <div
+                      className="absolute pointer-events-none rounded-full border-4 border-white shadow-2xl overflow-hidden"
+                      style={{
+                        width: 160,
+                        height: 160,
+                        left: zoomPosition.x - 80,
+                        top: zoomPosition.y - 80,
+                        zIndex: 20,
+                        backgroundImage: `url(${processedImage})`,
+                        backgroundSize: `${processedImageRef.current.offsetWidth * 3}px ${processedImageRef.current.offsetHeight * 3}px`,
+                        backgroundPosition: `-${zoomPosition.x * 3 - 80}px -${zoomPosition.y * 3 - 80}px`,
+                        backgroundRepeat: "no-repeat",
+                      }}
+                    >
+                      <div className="absolute inset-0 rounded-full border-2 border-blue-500/60" />
+                      <div className="absolute top-1/2 left-0 right-0 h-px bg-blue-500/60" />
+                      <div className="absolute left-1/2 top-0 bottom-0 w-px bg-blue-500/60" />
+                    </div>
+                  </>
+                )}
             </div>
           </div>
         </div>

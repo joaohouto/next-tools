@@ -98,7 +98,7 @@ export default function FileDropzone({
         `w-full h-48 flex flex-col items-center justify-center p-4 border-2 border-dashed rounded-xl cursor-pointer transition-all ${
           highlight ? "border-blue-400 bg-blue-400/20" : "border-foreground/20"
         }`,
-        className
+        className,
       )}
     >
       {isLoading ? (
@@ -107,7 +107,7 @@ export default function FileDropzone({
         <UploadIcon size={24} className="text-muted-foreground" />
       )}
 
-      <p className="text-muted-foreground text-sm text-center select-none mt-2">
+      <p className="text-muted-foreground text-sm text-center select-none mt-2 text-balance">
         {label || "Arraste, clique ou cole (Ctrl+V) um arquivo"}
       </p>
       <input

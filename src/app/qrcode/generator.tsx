@@ -41,7 +41,7 @@ export function QRCodeGenerator() {
           </div>
         ) : (
           <div className="flex h-[200px] w-[200px] items-center justify-center text-muted-foreground/30">
-            <QrCode size={120} strokeWidth={1} />
+            <QrCode size={164} strokeWidth={1} />
           </div>
         )}
       </div>
@@ -64,6 +64,7 @@ export function QRCodeGenerator() {
             <ColorPicker
               color={config.fgColor}
               setColor={(c) => setConfig({ ...config, fgColor: c })}
+              showGradientTab={false}
             />
           </div>
           <div className="flex flex-col gap-1.5">
@@ -71,6 +72,7 @@ export function QRCodeGenerator() {
             <ColorPicker
               color={config.bgColor}
               setColor={(c) => setConfig({ ...config, bgColor: c })}
+              showGradientTab={false}
             />
           </div>
         </div>
@@ -103,7 +105,9 @@ export function QRCodeGenerator() {
               {FORMAT_OPTIONS.map((f) => (
                 <button
                   key={f}
-                  onClick={() => setConfig({ ...config, format: f.toLowerCase() })}
+                  onClick={() =>
+                    setConfig({ ...config, format: f.toLowerCase() })
+                  }
                   className={`rounded-lg border py-1.5 text-xs font-medium transition-all active:scale-95 ${
                     config.format === f.toLowerCase()
                       ? "border-primary/40 bg-primary/10 text-foreground"
@@ -119,7 +123,9 @@ export function QRCodeGenerator() {
           <div className="flex flex-col gap-1.5 flex-1">
             <span className="text-xs text-muted-foreground">Margem</span>
             <button
-              onClick={() => setConfig({ ...config, includeMargin: !config.includeMargin })}
+              onClick={() =>
+                setConfig({ ...config, includeMargin: !config.includeMargin })
+              }
               className={`rounded-lg border py-1.5 text-xs font-medium transition-all active:scale-95 ${
                 config.includeMargin
                   ? "border-primary/40 bg-primary/10 text-foreground"
@@ -144,7 +150,9 @@ export function QRCodeGenerator() {
         </Button>
         <Button
           disabled={!text}
-          onClick={() => exportQRCode(imageRef.current, config, `qrcode-${text}`)}
+          onClick={() =>
+            exportQRCode(imageRef.current, config, `qrcode-${text}`)
+          }
         >
           <Download className="size-4" />
           Baixar

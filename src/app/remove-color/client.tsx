@@ -2,19 +2,23 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import { Download, RefreshCw, Trash2, Pipette, Info, Copy } from "lucide-react";
-import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import FileDropzone from "@/components/file-dropzone";
 import { useDebounce } from "@/hooks/use-debounce";
 import { toast } from "sonner";
 
+const CHECKERBOARD = {
+  backgroundImage:
+    "linear-gradient(45deg, #e2e8f0 25%, transparent 25%), linear-gradient(-45deg, #e2e8f0 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #e2e8f0 75%), linear-gradient(-45deg, transparent 75%, #e2e8f0 75%)",
+  backgroundSize: "20px 20px",
+  backgroundPosition: "0 0, 0 10px, 10px -10px, -10px 0px",
+  backgroundColor: "white",
+};
+
 export default function ColorRemover() {
-  const [originalImage, setOriginalImage] = useState<HTMLImageElement | null>(
-    null
-  );
+  const [originalImage, setOriginalImage] = useState<HTMLImageElement | null>(null);
   const [processedImage, setProcessedImage] = useState<string | null>(null);
   const [threshold, setThreshold] = useState(30);
   const debouncedThreshold = useDebounce(threshold, 500);
@@ -25,10 +29,7 @@ export default function ColorRemover() {
   const processedImageRef = useRef<HTMLDivElement | null>(null);
 
   const handleFilesUpload = (files: File[]) => {
-    if (files && files.length > 0) {
-      const file = files[0];
-      processFile(file);
-    }
+    if (files && files.length > 0) processFile(files[0]);
   };
 
   const processFile = (file: File) => {
@@ -47,20 +48,12 @@ export default function ColorRemover() {
     reader.readAsDataURL(file);
   };
 
-  const removeBackground = (
-    img: HTMLImageElement,
-    thresholdValue: number,
-    color: string
-  ) => {
+  const removeBackground = (img: HTMLImageElement, thresholdValue: number, color: string) => {
     setIsProcessing(true);
-
     setTimeout(() => {
       const canvas = document.createElement("canvas");
       const ctx = canvas.getContext("2d");
-      if (!ctx) {
-        setIsProcessing(false);
-        return;
-      }
+      if (!ctx) { setIsProcessing(false); return; }
 
       canvas.width = img.width;
       canvas.height = img.height;
@@ -74,19 +67,12 @@ export default function ColorRemover() {
       const targetB = parseInt(color.slice(5, 7), 16);
 
       for (let i = 0; i < data.length; i += 4) {
-        const r = data[i];
-        const g = data[i + 1];
-        const b = data[i + 2];
-
         const diff = Math.sqrt(
-          Math.pow(r - targetR, 2) +
-            Math.pow(g - targetG, 2) +
-            Math.pow(b - targetB, 2)
+          Math.pow(data[i] - targetR, 2) +
+          Math.pow(data[i + 1] - targetG, 2) +
+          Math.pow(data[i + 2] - targetB, 2)
         );
-
-        if (diff < thresholdValue) {
-          data[i + 3] = 0;
-        }
+        if (diff < thresholdValue) data[i + 3] = 0;
       }
 
       ctx.putImageData(imageData, 0, 0);
@@ -95,50 +81,30 @@ export default function ColorRemover() {
     }, 100);
   };
 
-  const handleThresholdChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newThreshold = parseInt(e.target.value, 10);
-    setThreshold(newThreshold);
-  };
-
   useEffect(() => {
-    if (originalImage) {
-      removeBackground(originalImage, debouncedThreshold, targetColor);
-    }
+    if (originalImage) removeBackground(originalImage, debouncedThreshold, targetColor);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debouncedThreshold]);
 
   const handleColorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newColor = e.target.value;
     setTargetColor(newColor);
-    if (originalImage) {
-      removeBackground(originalImage, threshold, newColor);
-    }
+    if (originalImage) removeBackground(originalImage, threshold, newColor);
   };
 
   const handleImageClick = (e: React.MouseEvent<HTMLImageElement>) => {
     if (!isPickingColor || !originalImage) return;
-
     const canvas = document.createElement("canvas");
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
-
     canvas.width = originalImage.width;
     canvas.height = originalImage.height;
     ctx.drawImage(originalImage, 0, 0);
-
     const rect = e.currentTarget.getBoundingClientRect();
-    const x = Math.floor(
-      (e.clientX - rect.left) * (originalImage.width / rect.width)
-    );
-    const y = Math.floor(
-      (e.clientY - rect.top) * (originalImage.height / rect.height)
-    );
-
-    const imageData = ctx.getImageData(x, y, 1, 1);
-    const [r, g, b] = imageData.data;
-
-    const hexColor =
-      "#" + [r, g, b].map((c) => c.toString(16).padStart(2, "0")).join("");
+    const x = Math.floor((e.clientX - rect.left) * (originalImage.width / rect.width));
+    const y = Math.floor((e.clientY - rect.top) * (originalImage.height / rect.height));
+    const [r, g, b] = ctx.getImageData(x, y, 1, 1).data;
+    const hexColor = "#" + [r, g, b].map((c) => c.toString(16).padStart(2, "0")).join("");
     setTargetColor(hexColor);
     setIsPickingColor(false);
     removeBackground(originalImage, threshold, hexColor);
@@ -154,19 +120,9 @@ export default function ColorRemover() {
 
   const copyImage = async () => {
     if (!processedImage) return;
-
     try {
-      // Converte base64 para Blob
-      const response = await fetch(processedImage);
-      const blob = await response.blob();
-
-      // Copia como imagem para área de transferência
-      await navigator.clipboard.write([
-        new ClipboardItem({
-          [blob.type]: blob,
-        }),
-      ]);
-
+      const blob = await fetch(processedImage).then((r) => r.blob());
+      await navigator.clipboard.write([new ClipboardItem({ [blob.type]: blob })]);
       toast.success("Imagem copiada!");
     } catch (err) {
       console.error("Erro ao copiar:", err);
@@ -185,215 +141,194 @@ export default function ColorRemover() {
   const handleZoomMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!processedImageRef.current) return;
     const rect = processedImageRef.current.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    setZoomPosition({ x, y, show: true });
+    setZoomPosition({ x: e.clientX - rect.left, y: e.clientY - rect.top, show: true });
   };
 
-  const handleZoomLeave = () => {
-    setZoomPosition({ x: 0, y: 0, show: false });
-  };
-
-  return (
-    <div className="min-h-screen bg-gradient-to-br p-8">
-      <div className="max-w-7xl mx-auto">
-        <div className="text-center mb-8">
-          <h1 className="text-lg font-semibold">Removedor de Cor</h1>
-          <p className="text-muted-foreground text-sm">
-            Deixe suas imagens transparentes.
-          </p>
-        </div>
-
-        {!originalImage ? (
+  if (!originalImage) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-6">
+        <div className="w-full max-w-sm flex flex-col gap-4">
+          <div className="text-center">
+            <p className="text-sm text-muted-foreground">
+              Processado no seu dispositivo, sem enviar para servidores.
+            </p>
+          </div>
           <FileDropzone
             onUpload={handleFilesUpload}
             accept="image/*"
             isLoading={isProcessing}
-            className="mx-auto max-w-lg"
           />
-        ) : (
-          <div className="space-y-6">
-            {/* Controles */}
-            <Card className="p-4 mx-auto max-w-lg">
-              <div className="space-y-4">
-                <div className="flex flex-col md:flex-row gap-4">
-                  {/* Seletor de Cor */}
-                  <div className="flex-1">
-                    <Label className="mb-2 block">Cor para remover</Label>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="color"
-                        value={targetColor}
-                        onChange={handleColorChange}
-                        className="w-10 h-10 rounded-lg cursor-pointer border-2"
-                      />
-                      <Input
-                        type="text"
-                        value={targetColor}
-                        onChange={handleColorChange}
-                        placeholder="#ffffff"
-                        className="flex-1 font-mono"
-                      />
-                      <Button
-                        variant={isPickingColor ? "default" : "outline"}
-                        onClick={() => setIsPickingColor(!isPickingColor)}
-                        className="whitespace-nowrap"
-                      >
-                        <Pipette className="w-4 h-4" />
-                        <span className="hidden sm:inline">
-                          {isPickingColor ? "Cancelar" : "Conta-gotas"}
-                        </span>
-                      </Button>
-                    </div>
-                  </div>
+        </div>
+      </div>
+    );
+  }
 
-                  {/* Botões de Ação */}
-                  <div className="flex gap-2 md:items-end">
-                    <Button onClick={reset} variant="outline">
-                      <Trash2 className="w-4 h-4" />
-                      <span className="hidden sm:inline">Nova</span>
-                    </Button>
-
-                    <Button
-                      onClick={copyImage}
-                      disabled={!processedImage || isProcessing}
-                      size="icon"
-                      variant="outline"
-                    >
-                      <Copy />
-                    </Button>
-
-                    <Button
-                      onClick={downloadImage}
-                      disabled={!processedImage || isProcessing}
-                      size="icon"
-                    >
-                      <Download />
-                    </Button>
-                  </div>
-                </div>
-
-                {/* Controle de Tolerância */}
-                <div>
-                  <Label className="mb-2 block">Tolerância: {threshold}</Label>
-                  <input
-                    type="range"
-                    min="0"
-                    max="100"
-                    value={threshold}
-                    onChange={handleThresholdChange}
-                    className="w-full h-2 bg-neutral-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
-                  />
-                  <span className="text-xs text-muted-foreground block mt-1">
-                    Ajuste para remover tons similares à cor selecionada
+  return (
+    <div className="min-h-screen p-6">
+      <div className="max-w-3xl mx-auto flex flex-col gap-6">
+        {/* Controls bar */}
+        <div className="rounded-2xl border bg-muted/20 p-4 flex flex-col gap-4">
+          <div className="flex flex-col sm:flex-row gap-4">
+            {/* Color picker */}
+            <div className="flex-1 flex flex-col gap-2">
+              <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                Cor para remover
+              </Label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="color"
+                  value={targetColor}
+                  onChange={handleColorChange}
+                  className="w-9 h-9 rounded-lg cursor-pointer border"
+                />
+                <Input
+                  type="text"
+                  value={targetColor}
+                  onChange={handleColorChange}
+                  placeholder="#ffffff"
+                  className="flex-1 font-mono h-9"
+                />
+                <Button
+                  variant={isPickingColor ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setIsPickingColor(!isPickingColor)}
+                >
+                  <Pipette className="size-3.5" />
+                  <span className="hidden sm:inline">
+                    {isPickingColor ? "Cancelar" : "Conta-gotas"}
                   </span>
-                </div>
-              </div>
-            </Card>
-
-            {/* Preview */}
-            <div className="grid md:grid-cols-2 gap-6">
-              <div>
-                <Badge className="mb-2">Original</Badge>
-                <div
-                  className={`relative bg-slate-100 rounded-lg overflow-hidden transition-all ${
-                    isPickingColor && "border-4 border-blue-500"
-                  }`}
-                >
-                  <img
-                    src={originalImage.src}
-                    alt="Original"
-                    className={`w-full h-auto ${
-                      isPickingColor ? "cursor-crosshair" : ""
-                    }`}
-                    onClick={handleImageClick}
-                  />
-                  {isPickingColor && (
-                    <div className="absolute inset-0 bg-blue-500/20 pointer-events-none flex items-center justify-center">
-                      <div className="bg-blue-600 text-white text-sm px-6 py-2 rounded-full flex gap-2 items-center">
-                        <Info className="w-4 h-4" />
-                        Clique para selecionar a cor
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div>
-                <Badge className="mb-2">
-                  Sem Cor
-                  {isProcessing && (
-                    <RefreshCw className="w-3 h-3 ml-2 inline animate-spin" />
-                  )}
-                </Badge>
-                <div
-                  ref={processedImageRef}
-                  onMouseMove={handleZoomMove}
-                  onMouseLeave={handleZoomLeave}
-                  className="relative bg-slate-100 rounded-lg overflow-hidden min-h-[200px] flex items-center justify-center cursor-none"
-                  style={{
-                    backgroundImage:
-                      "linear-gradient(45deg, #e2e8f0 25%, transparent 25%), linear-gradient(-45deg, #e2e8f0 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #e2e8f0 75%), linear-gradient(-45deg, transparent 75%, #e2e8f0 75%)",
-                    backgroundSize: "20px 20px",
-                    backgroundPosition: "0 0, 0 10px, 10px -10px, -10px 0px",
-                  }}
-                >
-                  {processedImage && (
-                    <img
-                      src={processedImage}
-                      alt="Processado"
-                      className="w-full h-auto"
-                    />
-                  )}
-                  {zoomPosition.show &&
-                    processedImage &&
-                    processedImageRef.current && (
-                      <>
-                        <div
-                          className="absolute z-10 pointer-events-none border-4 border-white shadow-2xl rounded-full overflow-hidden"
-                          style={{
-                            width: "300px",
-                            height: "300px",
-                            left: `${zoomPosition.x - 75}px`,
-                            top: `${zoomPosition.y - 75}px`,
-                            backgroundColor: "white",
-                            backgroundImage:
-                              "linear-gradient(45deg, #e2e8f0 25%, transparent 25%), linear-gradient(-45deg, #e2e8f0 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #e2e8f0 75%), linear-gradient(-45deg, transparent 75%, #e2e8f0 75%)",
-                            backgroundSize: "20px 20px",
-                            backgroundPosition:
-                              "0 0, 0 10px, 10px -10px, -10px 0px",
-                          }}
-                        />
-                        <div
-                          className="absolute z-20 pointer-events-none border-4 border-white shadow-2xl rounded-full overflow-hidden"
-                          style={{
-                            width: "300px",
-                            height: "300px",
-                            left: `${zoomPosition.x - 75}px`,
-                            top: `${zoomPosition.y - 75}px`,
-                            backgroundImage: `url(${processedImage})`,
-                            backgroundSize: `${
-                              processedImageRef.current.offsetWidth * 3
-                            }px ${
-                              processedImageRef.current.offsetHeight * 3
-                            }px`,
-                            backgroundPosition: `-${
-                              zoomPosition.x * 3 - 75
-                            }px -${zoomPosition.y * 3 - 75}px`,
-                            backgroundRepeat: "no-repeat",
-                          }}
-                        >
-                          <div className="absolute inset-0 border-2 border-blue-500 rounded-full" />
-                          <div className="absolute top-1/2 left-0 right-0 h-px bg-blue-500" />
-                          <div className="absolute left-1/2 top-0 bottom-0 w-px bg-blue-500" />
-                        </div>
-                      </>
-                    )}
-                </div>
+                </Button>
               </div>
             </div>
+
+            {/* Actions */}
+            <div className="flex gap-2 sm:items-end">
+              <Button variant="outline" size="sm" onClick={reset}>
+                <Trash2 className="size-3.5" />
+                Nova imagem
+              </Button>
+              <div className="flex-1" />
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={copyImage}
+                disabled={!processedImage || isProcessing}
+              >
+                <Copy className="size-3.5" />
+                Copiar
+              </Button>
+              <Button
+                size="sm"
+                onClick={downloadImage}
+                disabled={!processedImage || isProcessing}
+              >
+                <Download className="size-3.5" />
+                Baixar
+              </Button>
+            </div>
           </div>
-        )}
+
+          {/* Tolerance slider */}
+          <div className="flex flex-col gap-1.5">
+            <div className="flex items-center justify-between">
+              <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                Tolerância
+              </Label>
+              <span className="font-mono text-sm font-medium">{threshold}</span>
+            </div>
+            <input
+              type="range"
+              min="0"
+              max="100"
+              value={threshold}
+              onChange={(e) => setThreshold(parseInt(e.target.value, 10))}
+              className="w-full h-1.5 bg-muted rounded-lg appearance-none cursor-pointer accent-blue-600"
+            />
+            <span className="text-xs text-muted-foreground">
+              Ajuste para remover tons similares à cor selecionada
+            </span>
+          </div>
+        </div>
+
+        {/* Before / After */}
+        <div className="grid md:grid-cols-2 gap-4">
+          {/* Original */}
+          <div className="flex flex-col gap-2">
+            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+              Original
+            </span>
+            <div
+              className={`relative rounded-xl overflow-hidden border bg-muted/30 transition-all ${
+                isPickingColor ? "ring-2 ring-blue-500" : ""
+              }`}
+            >
+              <img
+                src={originalImage.src}
+                alt="Original"
+                className={`w-full h-auto ${isPickingColor ? "cursor-crosshair" : ""}`}
+                onClick={handleImageClick}
+              />
+              {isPickingColor && (
+                <div className="absolute inset-0 bg-blue-500/10 pointer-events-none flex items-center justify-center">
+                  <div className="bg-blue-600 text-white text-sm px-4 py-1.5 rounded-full flex gap-2 items-center">
+                    <Info className="size-3.5" />
+                    Clique para selecionar a cor
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Result */}
+          <div className="flex flex-col gap-2">
+            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
+              Sem cor
+              {isProcessing && <RefreshCw className="size-3 animate-spin" />}
+            </span>
+            <div
+              ref={processedImageRef}
+              onMouseMove={handleZoomMove}
+              onMouseLeave={() => setZoomPosition({ x: 0, y: 0, show: false })}
+              className="relative rounded-xl overflow-hidden border min-h-[200px] flex items-center justify-center cursor-none"
+              style={CHECKERBOARD}
+            >
+              {processedImage && (
+                <img src={processedImage} alt="Processado" className="w-full h-auto" />
+              )}
+
+              {/* Magnifier */}
+              {zoomPosition.show && processedImage && processedImageRef.current && (
+                <>
+                  <div
+                    className="absolute pointer-events-none rounded-full border-4 border-white shadow-2xl overflow-hidden"
+                    style={{
+                      width: 160, height: 160,
+                      left: zoomPosition.x - 80, top: zoomPosition.y - 80,
+                      zIndex: 10,
+                      ...CHECKERBOARD,
+                    }}
+                  />
+                  <div
+                    className="absolute pointer-events-none rounded-full border-4 border-white shadow-2xl overflow-hidden"
+                    style={{
+                      width: 160, height: 160,
+                      left: zoomPosition.x - 80, top: zoomPosition.y - 80,
+                      zIndex: 20,
+                      backgroundImage: `url(${processedImage})`,
+                      backgroundSize: `${processedImageRef.current.offsetWidth * 3}px ${processedImageRef.current.offsetHeight * 3}px`,
+                      backgroundPosition: `-${zoomPosition.x * 3 - 80}px -${zoomPosition.y * 3 - 80}px`,
+                      backgroundRepeat: "no-repeat",
+                    }}
+                  >
+                    <div className="absolute inset-0 rounded-full border-2 border-blue-500/60" />
+                    <div className="absolute top-1/2 left-0 right-0 h-px bg-blue-500/60" />
+                    <div className="absolute left-1/2 top-0 bottom-0 w-px bg-blue-500/60" />
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

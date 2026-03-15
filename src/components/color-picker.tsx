@@ -16,10 +16,12 @@ export function ColorPicker({
   color,
   setColor,
   className,
+  showGradientTab = true,
 }: {
   color: string;
   setColor: (color: string) => void;
   className?: string;
+  showGradientTab?: boolean;
 }) {
   const solids = [
     // Neutros
@@ -73,10 +75,22 @@ export function ColorPicker({
   ];
 
   const gradients = [
+    // Tons suaves
     "linear-gradient(to top left,#accbee,#e7f0fd)",
     "linear-gradient(to top left,#d5d4d0,#d5d4d0,#eeeeec)",
+    "linear-gradient(to top left,#fdfbfb,#ebedee)",
+    "linear-gradient(to top left,#ffecd2,#fcb69f)",
+    "linear-gradient(to top left,#a1c4fd,#c2e9fb)",
+    "linear-gradient(to top left,#fddb92,#d1fdff)",
+    "linear-gradient(to top left,#e0c3fc,#8ec5fc)",
+    "linear-gradient(to top left,#f5f7fa,#c3cfe2)",
+    // Escuros
     "linear-gradient(to top left,#000000,#434343)",
     "linear-gradient(to top left,#09203f,#537895)",
+    "linear-gradient(to top left,#0f0c29,#302b63,#24243e)",
+    "linear-gradient(to top left,#1a1a2e,#16213e,#0f3460)",
+    "linear-gradient(to top left,#232526,#414345)",
+    // Vibrantes
     "linear-gradient(to top left,#AC32E4,#7918F2,#4801FF)",
     "linear-gradient(to top left,#f953c6,#b91d73)",
     "linear-gradient(to top left,#ee0979,#ff6a00)",
@@ -85,10 +99,20 @@ export function ColorPicker({
     "linear-gradient(to top left,#4facfe,#00f2fe)",
     "linear-gradient(to top left,#0ba360,#3cba92)",
     "linear-gradient(to top left,#FDFC47,#24FE41)",
+    "linear-gradient(to top left,#f7971e,#ffd200)",
+    "linear-gradient(to top left,#56ab2f,#a8e063)",
+    "linear-gradient(to top left,#614385,#516395)",
+    "linear-gradient(to top left,#02aab0,#00cdac)",
+    "linear-gradient(to top left,#d53369,#cbad6d)",
+    // Multicoloridos
     "linear-gradient(to top left,#8a2be2,#0000cd,#228b22,#ccff00)",
     "linear-gradient(to top left,#40E0D0,#FF8C00,#FF0080)",
     "linear-gradient(to top left,#fcc5e4,#fda34b,#ff7882,#c8699e,#7046aa,#0c1db8,#020f75)",
     "linear-gradient(to top left,#ff75c3,#ffa647,#ffe83f,#9fff5b,#70e2ff,#cd93ff)",
+    "linear-gradient(to right,#fc5c7d,#6a3093)",
+    "linear-gradient(to right,#43cea2,#185a9d)",
+    "linear-gradient(to right,#f7ff00,#db36a4)",
+    "linear-gradient(to right,#11998e,#38ef7d)",
   ];
 
   const defaultTab = useMemo(() => {
@@ -103,23 +127,23 @@ export function ColorPicker({
         <Button
           variant={"outline"}
           className={cn(
-            "w-full justify-start text-left font-normal",
+            "w-full justify-start text-left font-normal overflow-hidden",
             !color && "text-muted-foreground",
-            className
+            className,
           )}
         >
-          <div className="w-full flex items-center gap-2">
+          <div className="flex items-center gap-2 min-w-0 overflow-hidden">
             {color ? (
               <div
-                className="h-4 w-4 rounded border !bg-center !bg-cover transition-all"
+                className="h-4 w-4 rounded border !bg-center !bg-cover transition-all flex-shrink-0"
                 style={{ background: color }}
               ></div>
             ) : (
-              <Paintbrush className="h-4 w-4" />
+              <Paintbrush className="h-4 w-4 flex-shrink-0" />
             )}
-            <div className="truncate flex-1 min-w-0">
+            <span className="truncate min-w-0">
               {color ? color : "Escolha uma cor"}
-            </div>
+            </span>
           </div>
         </Button>
       </PopoverTrigger>
@@ -129,9 +153,11 @@ export function ColorPicker({
             <TabsTrigger className="flex-1" value="solid">
               Sólido
             </TabsTrigger>
-            <TabsTrigger className="flex-1" value="gradient">
-              Gradiente
-            </TabsTrigger>
+            {showGradientTab !== false && (
+              <TabsTrigger className="flex-1" value="gradient">
+                Gradiente
+              </TabsTrigger>
+            )}
           </TabsList>
 
           <TabsContent value="solid" className="flex flex-wrap gap-1 mt-0">
