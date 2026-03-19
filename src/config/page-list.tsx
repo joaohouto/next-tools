@@ -20,9 +20,10 @@ import {
   Repeat2,
   Palette,
   GitCompare,
+  Fish,
 } from "lucide-react";
 
-export type PageCategory = "Imagens" | "Texto" | "Produtividade" | "Utilidades";
+export type PageCategory = "Imagens" | "Texto" | "Produtividade" | "Utilidades" | "Diversão";
 
 export const UNORDERED_LIST = [
   // Imagens
@@ -53,8 +54,11 @@ export const UNORDERED_LIST = [
   { title: "Nível Bolha",     path: "/bubble-level", icon: <Ruler />,  category: "Utilidades" as PageCategory },
   { title: "Webcam",          path: "/webcam",       icon: <Camera />, category: "Utilidades" as PageCategory },
   { title: "Estúdio de Ícone",path: "/icon",         icon: <Atom />,   category: "Utilidades" as PageCategory },
+
+  // Diversão
+  { title: "Aquário",         path: "/aquario",      icon: <Fish />,   category: "Diversão" as PageCategory },
 ];
 
 export const PAGE_LIST = UNORDERED_LIST.sort((a, b) => a.title.localeCompare(b.title));
 
-export const CATEGORY_ORDER: PageCategory[] = ["Imagens", "Texto", "Produtividade", "Utilidades"];
+export const CATEGORY_ORDER: PageCategory[] = ["Imagens", "Texto", "Produtividade", "Utilidades", "Diversão"];
