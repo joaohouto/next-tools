@@ -4,7 +4,8 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 
 import { useIsMobile } from "@/hooks/use-mobile";
-import { PAGE_LIST, CATEGORY_ORDER } from "@/config/page-list";
+import { useToolUsage } from "@/hooks/use-tool-usage";
+import { getSortedByUsage, CATEGORY_ORDER } from "@/config/page-list";
 
 import { BadgeRotateBorder } from "@/components/badge-rotate-border";
 import {
@@ -19,6 +20,9 @@ import {
 export default function Home() {
   const router = useRouter();
   const isMobile = useIsMobile();
+  const { usage, trackUsage } = useToolUsage();
+
+  const sortedList = getSortedByUsage(usage);
 
   return (
     <div className="max-w-[400px] min-h-screen flex flex-col justify-center items-center mx-auto p-8">
@@ -34,15 +38,20 @@ export default function Home() {
           <CommandList>
             {CATEGORY_ORDER.map((category) => (
               <CommandGroup key={category} heading={category}>
-                {PAGE_LIST.filter((p) => p.category === category).map((page) => (
-                  <CommandItem
-                    key={page.path}
-                    onSelect={() => router.push(page.path)}
-                  >
-                    {page.icon}
-                    <span>{page.title}</span>
-                  </CommandItem>
-                ))}
+                {sortedList
+                  .filter((p) => p.category === category)
+                  .map((page) => (
+                    <CommandItem
+                      key={page.path}
+                      onSelect={() => {
+                        trackUsage(page.path);
+                        router.push(page.path);
+                      }}
+                    >
+                      {page.icon}
+                      <span>{page.title}</span>
+                    </CommandItem>
+                  ))}
               </CommandGroup>
             ))}
 
