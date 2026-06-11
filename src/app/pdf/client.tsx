@@ -42,6 +42,8 @@ interface MergeItem {
 interface RenderedPage {
   number: number;
   dataUrl: string;
+  width: number;
+  height: number;
 }
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
@@ -497,10 +499,15 @@ function SplitView({ file, pageCount, onBack }: { file: File; pageCount: number;
 
 // ─── to-image view ────────────────────────────────────────────────────────────
 
+function dataUrlToSvg(page: RenderedPage): string {
+  return `<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${page.width}" height="${page.height}" viewBox="0 0 ${page.width} ${page.height}">\n  <image xlink:href="${page.dataUrl}" x="0" y="0" width="${page.width}" height="${page.height}"/>\n</svg>`;
+}
+
 function ToImageView({ file, onBack }: { file: File; onBack: () => void }) {
   const [pages, setPages] = useState<RenderedPage[]>([]);
   const [rendering, setRendering] = useState(false);
   const [scale, setScale] = useState(2);
+  const [format, setFormat] = useState<"png" | "svg">("png");
   const fileRef = useRef(file);
 
   const render = useCallback(async (f: File, s: number) => {
@@ -516,7 +523,7 @@ function ToImageView({ file, onBack }: { file: File; onBack: () => void }) {
         canvas.width = vp.width;
         canvas.height = vp.height;
         await page.render({ canvasContext: canvas.getContext("2d")!, viewport: vp }).promise;
-        setPages((prev) => [...prev, { number: i, dataUrl: canvas.toDataURL("image/png") }]);
+        setPages((prev) => [...prev, { number: i, dataUrl: canvas.toDataURL("image/png"), width: canvas.width, height: canvas.height }]);
       }
     } catch (err) {
       console.error(err);
@@ -532,10 +539,14 @@ function ToImageView({ file, onBack }: { file: File; onBack: () => void }) {
 
   const download = (page: RenderedPage) => {
     const name = file.name.replace(/\.pdf$/i, "");
-    Object.assign(document.createElement("a"), {
-      href: page.dataUrl,
-      download: `${name}-p${page.number}.png`,
-    }).click();
+    if (format === "svg") {
+      const svgContent = dataUrlToSvg(page);
+      const url = URL.createObjectURL(new Blob([svgContent], { type: "image/svg+xml" }));
+      Object.assign(document.createElement("a"), { href: url, download: `${name}-p${page.number}.svg` }).click();
+      URL.revokeObjectURL(url);
+    } else {
+      Object.assign(document.createElement("a"), { href: page.dataUrl, download: `${name}-p${page.number}.png` }).click();
+    }
   };
 
   return (
@@ -556,6 +567,24 @@ function ToImageView({ file, onBack }: { file: File; onBack: () => void }) {
         <p className="text-xs text-muted-foreground">1× = 72 dpi · 2× = 144 dpi · 4× = 288 dpi</p>
       </div>
 
+      <div className="flex flex-col gap-2">
+        <Label>Formato de exportação</Label>
+        <div className="flex gap-2">
+          {(["png", "svg"] as const).map((f) => (
+            <button key={f} onClick={() => setFormat(f)}
+              className={cn(
+                "px-4 py-1.5 rounded-lg border text-sm font-medium transition-all",
+                format === f ? "bg-primary text-primary-foreground border-primary" : "hover:border-foreground/40",
+              )}>
+              {f.toUpperCase()}
+            </button>
+          ))}
+        </div>
+        {format === "svg" && (
+          <p className="text-xs text-muted-foreground">SVG com imagem rasterizada embutida (compatível com editores vetoriais)</p>
+        )}
+      </div>
+
       {rendering && pages.length === 0 && (
         <div className="flex items-center justify-center gap-2 py-8 text-muted-foreground text-sm">
           <Loader2 size={16} className="animate-spin" /> Convertendo…
@@ -568,7 +597,7 @@ function ToImageView({ file, onBack }: { file: File; onBack: () => void }) {
             <Download size={15} />
             {rendering
               ? `Convertendo… (${pages.length})`
-              : `Baixar todas (${pages.length} imagem${pages.length !== 1 ? "ns" : ""})`}
+              : `Baixar todas (${pages.length} ${format.toUpperCase()})`}
           </Button>
           <div className="flex flex-col gap-3">
             {pages.map((page) => (
@@ -577,7 +606,7 @@ function ToImageView({ file, onBack }: { file: File; onBack: () => void }) {
                 <div className="flex items-center justify-between px-3 py-2 bg-muted/30">
                   <span className="text-xs text-muted-foreground">Página {page.number}</span>
                   <Button variant="ghost" size="sm" className="h-7 text-xs gap-1" onClick={() => download(page)}>
-                    <Download size={12} /> PNG
+                    <Download size={12} /> {format.toUpperCase()}
                   </Button>
                 </div>
               </div>

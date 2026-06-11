@@ -1,13 +1,5 @@
-import Client from "./client";
-import { PAGE_LIST } from "@/config/page-list";
-
-const pageMeta = PAGE_LIST.find((p) => p.path === "/convert")!;
-
-export const metadata = {
-  title: pageMeta.title,
-  openGraph: { images: [`/api/og?title=${pageMeta.title}`] },
-};
+import { redirect } from "next/navigation";
 
 export default function Page() {
-  return <Client />;
+  redirect("/imagem");
 }

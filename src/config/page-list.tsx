@@ -9,18 +9,12 @@ import {
   Timer,
   Smile,
   Camera,
-  BookImage,
-  Eraser,
-  PenTool,
   AppWindow,
   Signature,
   NotebookPen,
-  ImageDown,
-  Scaling,
-  Repeat2,
-  Palette,
   GitCompare,
   FileText,
+  Images,
 } from "lucide-react";
 
 import type { ToolUsageRecord } from "@/hooks/use-tool-usage";
@@ -29,13 +23,7 @@ export type PageCategory = "Imagens" | "Texto" | "Produtividade" | "Utilidades";
 
 export const UNORDERED_LIST = [
   // Imagens
-  { title: "Remover Fundo",        path: "/remove-bg",    icon: <BookImage />, category: "Imagens" as PageCategory },
-  { title: "Remover Cor",          path: "/remove-color", icon: <Eraser />,    category: "Imagens" as PageCategory },
-  { title: "Vetorizar Logo",       path: "/vectorizer",   icon: <PenTool />,   category: "Imagens" as PageCategory },
-  { title: "Comprimir Imagem",     path: "/compress",     icon: <ImageDown />, category: "Imagens" as PageCategory },
-  { title: "Redimensionar Imagem", path: "/resize",       icon: <Scaling />,   category: "Imagens" as PageCategory },
-  { title: "Converter Formato",    path: "/convert",      icon: <Repeat2 />,   category: "Imagens" as PageCategory },
-  { title: "Extrator de Paleta",   path: "/palette",      icon: <Palette />,   category: "Imagens" as PageCategory },
+  { title: "Imagens", path: "/imagem", icon: <Images />, category: "Imagens" as PageCategory },
 
   // Texto
   { title: "OCR",                  path: "/ocr",          icon: <ScanText />,    category: "Texto" as PageCategory },
