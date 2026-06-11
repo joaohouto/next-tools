@@ -20,14 +20,12 @@ import {
   Repeat2,
   Palette,
   GitCompare,
-  FileStack,
-  Scissors,
-  FileImage,
+  FileText,
 } from "lucide-react";
 
 import type { ToolUsageRecord } from "@/hooks/use-tool-usage";
 
-export type PageCategory = "Imagens" | "Texto" | "Produtividade" | "Utilidades" | "PDF";
+export type PageCategory = "Imagens" | "Texto" | "Produtividade" | "Utilidades";
 
 export const UNORDERED_LIST = [
   // Imagens
@@ -52,17 +50,13 @@ export const UNORDERED_LIST = [
   { title: "ZapLink",      path: "/zaplink",      icon: <AppWindow />,     category: "Produtividade" as PageCategory },
 
   // Utilidades
-  { title: "QRCode",          path: "/qrcode",       icon: <QrCode />, category: "Utilidades" as PageCategory },
-  { title: "Gerador de Senha",path: "/password",     icon: <Lock />,   category: "Utilidades" as PageCategory },
-  { title: "Emoji",           path: "/emoji",        icon: <Smile />,  category: "Utilidades" as PageCategory },
-  { title: "Nível Bolha",     path: "/bubble-level", icon: <Ruler />,  category: "Utilidades" as PageCategory },
-  { title: "Webcam",          path: "/webcam",       icon: <Camera />, category: "Utilidades" as PageCategory },
-  { title: "Estúdio de Ícone",path: "/icon",         icon: <Atom />,   category: "Utilidades" as PageCategory },
-
-  // PDF
-  { title: "Mesclar PDF",     path: "/pdf-merge",    icon: <FileStack />, category: "PDF" as PageCategory },
-  { title: "Dividir PDF",     path: "/pdf-split",    icon: <Scissors />,  category: "PDF" as PageCategory },
-  { title: "PDF para Imagem", path: "/pdf-to-image", icon: <FileImage />, category: "PDF" as PageCategory },
+  { title: "QRCode",          path: "/qrcode",       icon: <QrCode />,    category: "Utilidades" as PageCategory },
+  { title: "Gerador de Senha",path: "/password",     icon: <Lock />,      category: "Utilidades" as PageCategory },
+  { title: "Emoji",           path: "/emoji",        icon: <Smile />,     category: "Utilidades" as PageCategory },
+  { title: "Nível Bolha",     path: "/bubble-level", icon: <Ruler />,     category: "Utilidades" as PageCategory },
+  { title: "Webcam",          path: "/webcam",       icon: <Camera />,    category: "Utilidades" as PageCategory },
+  { title: "Estúdio de Ícone",path: "/icon",         icon: <Atom />,      category: "Utilidades" as PageCategory },
+  { title: "PDF",             path: "/pdf",          icon: <FileText />,  category: "Utilidades" as PageCategory },
 ];
 
 export const PAGE_LIST = [...UNORDERED_LIST].sort((a, b) =>
@@ -74,7 +68,6 @@ export const CATEGORY_ORDER: PageCategory[] = [
   "Texto",
   "Produtividade",
   "Utilidades",
-  "PDF",
 ];
 
 export function getSortedByUsage(usage: ToolUsageRecord = {}) {

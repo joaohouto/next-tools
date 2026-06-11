@@ -1,16 +1,5 @@
-import Client from "./client";
-
-import { PAGE_LIST } from "@/config/page-list";
-
-const pageMeta = PAGE_LIST.filter((p) => p.path === "/pdf-merge")[0];
-
-export const metadata = {
-  title: pageMeta.title,
-  openGraph: {
-    images: [`/api/og?title=${pageMeta.title}`],
-  },
-};
+import { redirect } from "next/navigation";
 
 export default function Page() {
-  return <Client />;
+  redirect("/pdf");
 }
