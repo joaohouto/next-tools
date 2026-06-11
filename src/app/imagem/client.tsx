@@ -519,32 +519,46 @@ function ConvertView({ initialFiles, onBack }: { initialFiles: File[]; onBack: (
 // ─── REMOVE BG VIEW ───────────────────────────────────────────────────────────
 
 function RemoveBgView({ file, onBack }: { file: File; onBack: () => void }) {
-  const [img, setImg] = useState<HTMLImageElement | null>(null);
+  const [previewUrl] = useState(() => URL.createObjectURL(file));
   const [result, setResult] = useState<string | null>(null);
   const [processing, setProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [progressLabel, setProgressLabel] = useState("Carregando modelo…");
   const containerRef = useRef<HTMLDivElement>(null);
   const [zoom, setZoom] = useState({ x: 0, y: 0, show: false });
+  const resultUrlRef = useRef<string | null>(null);
 
   useEffect(() => {
-    fileToDataUrl(file).then(async (src) => {
-      const image = await loadImage(src);
-      setImg(image);
-      doRemoveBg(src);
-    });
-    return () => { if (result) URL.revokeObjectURL(result); };
+    doRemoveBg();
+    return () => {
+      URL.revokeObjectURL(previewUrl);
+      if (resultUrlRef.current) URL.revokeObjectURL(resultUrlRef.current);
+    };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const doRemoveBg = async (src: string) => {
-    setProcessing(true); setProgress(0);
-    const interval = setInterval(() => setProgress((p) => p >= 90 ? (clearInterval(interval), 90) : p + 10), 200);
+  const doRemoveBg = async () => {
+    setProcessing(true); setProgress(0); setProgressLabel("Carregando modelo…");
+    const seen = new Map<string, [number, number]>();
     try {
       const { removeBackground } = await import("@imgly/background-removal");
-      const blob = await removeBackground(src);
-      clearInterval(interval); setProgress(100);
-      setResult(URL.createObjectURL(blob));
+      const blob = await removeBackground(file, {
+        model: "isnet_quint8",
+        progress: (key, current, total) => {
+          seen.set(key, [current, total]);
+          let c = 0, t = 0;
+          for (const [cur, tot] of seen.values()) { c += cur; t += tot; }
+          if (t > 0) {
+            const pct = Math.round((c / t) * 100);
+            setProgress(pct);
+            setProgressLabel(pct < 100 ? "Baixando modelo…" : "Processando imagem…");
+          }
+        },
+      });
+      setProgress(100);
+      if (resultUrlRef.current) URL.revokeObjectURL(resultUrlRef.current);
+      resultUrlRef.current = URL.createObjectURL(blob);
+      setResult(resultUrlRef.current);
     } catch (err) {
-      clearInterval(interval);
       console.error(err);
       toast.error("Erro ao remover fundo.");
     } finally {
@@ -553,7 +567,7 @@ function RemoveBgView({ file, onBack }: { file: File; onBack: () => void }) {
     }
   };
 
-  const download = () => { if (!result) return; Object.assign(document.createElement("a"), { href: result, download: "sem-fundo.png" }).click(); };
+  const download = () => { if (!result) return; Object.assign(document.createElement("a"), { href: result, download: `${file.name.replace(/\.[^.]+$/, "")}-sem-fundo.png` }).click(); };
   const copy = async () => {
     if (!result) return;
     try { const blob = await fetch(result).then((r) => r.blob()); await navigator.clipboard.write([new ClipboardItem({ [blob.type]: blob })]); toast.success("Copiado!"); }
@@ -567,47 +581,51 @@ function RemoveBgView({ file, onBack }: { file: File; onBack: () => void }) {
         {processing ? (
           <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between text-sm">
-              <span className="flex items-center gap-2 text-muted-foreground"><Sparkles size={16} className="animate-pulse text-blue-500" /> Processando com IA…</span>
-              <span className="font-mono font-medium">{progress}%</span>
+              <span className="flex items-center gap-2 text-muted-foreground">
+                {progress > 0
+                  ? <><Sparkles size={16} className="animate-pulse text-blue-500" /> {progressLabel}</>
+                  : <><Loader2 size={16} className="animate-spin text-blue-500" /> {progressLabel}</>
+                }
+              </span>
+              {progress > 0 && <span className="font-mono font-medium">{progress}%</span>}
             </div>
-            <Progress value={progress} className="h-1.5" />
+            {progress > 0 && <Progress value={progress} className="h-1.5" />}
           </div>
         ) : (
           <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={doRemoveBg} disabled={processing}><RefreshCw size={14} /> Refazer</Button>
             <div className="flex-1" />
             <Button variant="outline" size="sm" onClick={copy} disabled={!result}><Copy size={14} /> Copiar</Button>
             <Button size="sm" onClick={download} disabled={!result}><Download size={14} /> Baixar</Button>
           </div>
         )}
       </ControlsBar>
-      {img && (
-        <div className="grid md:grid-cols-2 gap-4">
-          <div className="flex flex-col gap-2">
-            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Original</span>
-            <div className="rounded-xl overflow-hidden border bg-muted/30"><img src={img.src} alt="" className="w-full h-auto" /></div>
-          </div>
-          <div className="flex flex-col gap-2">
-            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Sem fundo</span>
-            <div ref={containerRef} onMouseMove={(e) => { if (!containerRef.current) return; const r = containerRef.current.getBoundingClientRect(); setZoom({ x: e.clientX - r.left, y: e.clientY - r.top, show: true }); }} onMouseLeave={() => setZoom({ x: 0, y: 0, show: false })}
-              className="relative rounded-xl overflow-hidden border min-h-[200px] flex items-center justify-center cursor-none" style={CHECKERBOARD}>
-              {processing ? <Sparkles size={40} className="text-blue-500 animate-pulse" />
-                : result ? <img src={result} alt="" className="w-full h-auto" />
-                : <ImageIcon size={32} className="text-muted-foreground/20" />}
-              {zoom.show && result && containerRef.current && (
-                <>
-                  <div className="absolute pointer-events-none rounded-full border-4 border-white shadow-2xl overflow-hidden" style={{ width: 160, height: 160, left: zoom.x - 80, top: zoom.y - 80, zIndex: 10, ...CHECKERBOARD }} />
-                  <div className="absolute pointer-events-none rounded-full border-4 border-white shadow-2xl overflow-hidden"
-                    style={{ width: 160, height: 160, left: zoom.x - 80, top: zoom.y - 80, zIndex: 20, backgroundImage: `url(${result})`, backgroundSize: `${containerRef.current.offsetWidth * 3}px ${containerRef.current.offsetHeight * 3}px`, backgroundPosition: `-${zoom.x * 3 - 80}px -${zoom.y * 3 - 80}px`, backgroundRepeat: "no-repeat" }}>
-                    <div className="absolute inset-0 rounded-full border-2 border-blue-500/60" />
-                    <div className="absolute top-1/2 left-0 right-0 h-px bg-blue-500/60" />
-                    <div className="absolute left-1/2 top-0 bottom-0 w-px bg-blue-500/60" />
-                  </div>
-                </>
-              )}
-            </div>
+      <div className="grid md:grid-cols-2 gap-4">
+        <div className="flex flex-col gap-2">
+          <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Original</span>
+          <div className="rounded-xl overflow-hidden border bg-muted/30"><img src={previewUrl} alt="" className="w-full h-auto" /></div>
+        </div>
+        <div className="flex flex-col gap-2">
+          <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Sem fundo</span>
+          <div ref={containerRef} onMouseMove={(e) => { if (!containerRef.current) return; const r = containerRef.current.getBoundingClientRect(); setZoom({ x: e.clientX - r.left, y: e.clientY - r.top, show: true }); }} onMouseLeave={() => setZoom({ x: 0, y: 0, show: false })}
+            className="relative rounded-xl overflow-hidden border min-h-[200px] flex items-center justify-center cursor-none" style={CHECKERBOARD}>
+            {processing ? <Sparkles size={40} className="text-blue-500 animate-pulse" />
+              : result ? <img src={result} alt="" className="w-full h-auto" />
+              : <ImageIcon size={32} className="text-muted-foreground/20" />}
+            {zoom.show && result && containerRef.current && (
+              <>
+                <div className="absolute pointer-events-none rounded-full border-4 border-white shadow-2xl overflow-hidden" style={{ width: 160, height: 160, left: zoom.x - 80, top: zoom.y - 80, zIndex: 10, ...CHECKERBOARD }} />
+                <div className="absolute pointer-events-none rounded-full border-4 border-white shadow-2xl overflow-hidden"
+                  style={{ width: 160, height: 160, left: zoom.x - 80, top: zoom.y - 80, zIndex: 20, backgroundImage: `url(${result})`, backgroundSize: `${containerRef.current.offsetWidth * 3}px ${containerRef.current.offsetHeight * 3}px`, backgroundPosition: `-${zoom.x * 3 - 80}px -${zoom.y * 3 - 80}px`, backgroundRepeat: "no-repeat" }}>
+                  <div className="absolute inset-0 rounded-full border-2 border-blue-500/60" />
+                  <div className="absolute top-1/2 left-0 right-0 h-px bg-blue-500/60" />
+                  <div className="absolute left-1/2 top-0 bottom-0 w-px bg-blue-500/60" />
+                </div>
+              </>
+            )}
           </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }
