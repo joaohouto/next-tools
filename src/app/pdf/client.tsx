@@ -17,11 +17,10 @@ import {
   Trash2,
   Download,
   ArrowLeft,
-  Plus,
   Loader2,
+  Check,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { toast } from "sonner";
@@ -36,51 +35,50 @@ interface MergeItem {
   file: File;
   kind: "pdf" | "image";
   pageCount?: number;
-  previewUrl?: string;
+  /** object URL for images; rendered JPEG dataUrl for PDFs; null = loading */
+  thumbnail: string | null;
 }
 
-interface PageImage {
+interface RenderedPage {
   number: number;
   dataUrl: string;
 }
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
-const ACCEPTED_TYPES =
+const ACCEPTED =
   "application/pdf,.pdf,image/jpeg,image/png,image/webp,image/gif,image/bmp,.jpg,.jpeg,.png,.webp,.gif,.bmp";
 
-function isPdf(file: File) {
-  return (
-    file.type === "application/pdf" ||
-    file.name.toLowerCase().endsWith(".pdf")
-  );
+function isPdf(f: File) {
+  return f.type === "application/pdf" || f.name.toLowerCase().endsWith(".pdf");
+}
+function isImage(f: File) {
+  return f.type.startsWith("image/") || /\.(jpe?g|png|webp|gif|bmp)$/i.test(f.name);
+}
+function fmt(b: number) {
+  if (b < 1024) return `${b} B`;
+  if (b < 1048576) return `${(b / 1024).toFixed(1)} KB`;
+  return `${(b / 1048576).toFixed(2)} MB`;
 }
 
-function isImage(file: File) {
-  return (
-    file.type.startsWith("image/") ||
-    /\.(jpe?g|png|webp|gif|bmp)$/i.test(file.name)
-  );
+async function getPdfjs() {
+  const pdfjs = await import("pdfjs-dist");
+  pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
+  return pdfjs;
 }
 
-function fmt(bytes: number) {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1048576) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / 1048576).toFixed(2)} MB`;
-}
-
-function parseRanges(input: string, total: number): number[] {
-  const pages = new Set<number>();
-  for (const part of input.split(",").map((s) => s.trim()).filter(Boolean)) {
-    if (part.includes("-")) {
-      const [a, b] = part.split("-").map(Number);
-      for (let i = Math.max(1, a); i <= Math.min(total, b); i++) pages.add(i);
-    } else {
-      const n = Number(part);
-      if (n >= 1 && n <= total) pages.add(n);
-    }
-  }
-  return [...pages].sort((a, b) => a - b);
+/** Render one page of a PDF file to a JPEG dataUrl. */
+async function renderPage(file: File, pageNum: number, scale: number): Promise<string> {
+  const pdfjs = await getPdfjs();
+  const bytes = await file.arrayBuffer();
+  const doc = await pdfjs.getDocument({ data: new Uint8Array(bytes) }).promise;
+  const page = await doc.getPage(pageNum);
+  const vp = page.getViewport({ scale });
+  const canvas = document.createElement("canvas");
+  canvas.width = vp.width;
+  canvas.height = vp.height;
+  await page.render({ canvasContext: canvas.getContext("2d")!, viewport: vp }).promise;
+  return canvas.toDataURL("image/jpeg", 0.82);
 }
 
 async function toPng(file: File): Promise<ArrayBuffer> {
@@ -94,11 +92,11 @@ async function toPng(file: File): Promise<ArrayBuffer> {
       c.getContext("2d")!.drawImage(img, 0, 0);
       URL.revokeObjectURL(url);
       c.toBlob(
-        (blob) => blob ? blob.arrayBuffer().then(resolve).catch(reject) : reject(new Error("blob failed")),
+        (blob) => (blob ? blob.arrayBuffer().then(resolve).catch(reject) : reject(new Error("blob"))),
         "image/png",
       );
     };
-    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("load failed")); };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("load")); };
     img.src = url;
   });
 }
@@ -127,24 +125,15 @@ function DropZone({
 }) {
   const [over, setOver] = useState(false);
   const ref = useRef<HTMLInputElement>(null);
-
   const handle = (list: FileList | null) => {
-    if (!list) return;
-    const files = Array.from(list).filter((f) => isPdf(f) || isImage(f));
+    const files = Array.from(list ?? []).filter((f) => isPdf(f) || isImage(f));
     if (files.length) onFiles(files);
   };
-
-  const onDrop = (e: DragEvent) => {
-    e.preventDefault();
-    setOver(false);
-    handle(e.dataTransfer.files);
-  };
-
   return (
     <div
       onDragOver={(e) => { e.preventDefault(); setOver(true); }}
       onDragLeave={() => setOver(false)}
-      onDrop={onDrop}
+      onDrop={(e) => { e.preventDefault(); setOver(false); handle(e.dataTransfer.files); }}
       onClick={() => ref.current?.click()}
       className={cn(
         "border-2 border-dashed rounded-xl cursor-pointer transition-all flex flex-col items-center justify-center gap-2 select-none",
@@ -152,48 +141,27 @@ function DropZone({
         compact ? "py-4 px-6" : "py-16 px-8",
       )}
     >
-      <FileText
-        size={compact ? 20 : 36}
-        className={cn("text-muted-foreground", over && "text-primary")}
-      />
+      <FileText size={compact ? 20 : 36} className={cn("text-muted-foreground", over && "text-primary")} />
       <p className="text-sm text-muted-foreground text-center text-balance">
         {label ?? "Arraste PDFs ou imagens aqui"}
       </p>
       {!compact && (
-        <p className="text-xs text-muted-foreground/60">
-          Mesclar · Dividir · Converter para imagem
-        </p>
+        <p className="text-xs text-muted-foreground/60">Mesclar · Dividir · Converter para imagem</p>
       )}
-      <input
-        ref={ref}
-        type="file"
-        accept={ACCEPTED_TYPES}
-        multiple
-        className="hidden"
-        onChange={(e) => handle(e.target.files)}
-      />
+      <input ref={ref} type="file" accept={ACCEPTED} multiple className="hidden"
+        onChange={(e) => handle(e.target.files)} />
     </div>
   );
 }
 
 // ─── action card ──────────────────────────────────────────────────────────────
 
-function ActionCard({
-  icon,
-  title,
-  description,
-  onClick,
-}: {
-  icon: React.ReactNode;
-  title: string;
-  description: string;
-  onClick: () => void;
+function ActionCard({ icon, title, description, onClick }: {
+  icon: React.ReactNode; title: string; description: string; onClick: () => void;
 }) {
   return (
-    <button
-      onClick={onClick}
-      className="flex flex-col items-start gap-2 p-4 border rounded-xl hover:border-primary hover:bg-primary/5 transition-all text-left w-full"
-    >
+    <button onClick={onClick}
+      className="flex flex-col items-start gap-2 p-4 border rounded-xl hover:border-primary hover:bg-primary/5 transition-all text-left w-full">
       <div className="text-primary">{icon}</div>
       <div>
         <p className="text-sm font-medium">{title}</p>
@@ -203,57 +171,76 @@ function ActionCard({
   );
 }
 
+// ─── page thumbnail skeleton ───────────────────────────────────────────────────
+
+function ThumbSkeleton({ className }: { className?: string }) {
+  return (
+    <div className={cn("bg-muted animate-pulse rounded", className)} />
+  );
+}
+
 // ─── merge view ───────────────────────────────────────────────────────────────
 
-function MergeView({
-  initial,
-  onBack,
-}: {
-  initial: MergeItem[];
-  onBack: () => void;
-}) {
+function MergeView({ initial, onBack }: { initial: MergeItem[]; onBack: () => void }) {
   const [items, setItems] = useState<MergeItem[]>(initial);
   const [merging, setMerging] = useState(false);
   const [dragIdx, setDragIdx] = useState<number | null>(null);
   const [overIdx, setOverIdx] = useState<number | null>(null);
-  const previews = useRef<string[]>([]);
+  const objUrls = useRef<string[]>([]);
 
+  useEffect(() => () => objUrls.current.forEach(URL.revokeObjectURL), []);
+
+  // Render thumbnails for PDF items that don't have one yet
   useEffect(() => {
-    return () => previews.current.forEach(URL.revokeObjectURL);
-  }, []);
+    items.forEach((item) => {
+      if (item.kind === "pdf" && item.thumbnail === null) {
+        renderPage(item.file, 1, 0.35)
+          .then((dataUrl) =>
+            setItems((prev) =>
+              prev.map((i) => (i.id === item.id ? { ...i, thumbnail: dataUrl } : i)),
+            ),
+          )
+          .catch(() =>
+            setItems((prev) =>
+              prev.map((i) => (i.id === item.id ? { ...i, thumbnail: "" } : i)),
+            ),
+          );
+      }
+    });
+  }, [items.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const addFiles = useCallback(async (files: File[]) => {
-    const added: MergeItem[] = await Promise.all(
+    const newItems: MergeItem[] = await Promise.all(
       files.map(async (file) => {
         const id = `${file.name}-${Date.now()}-${Math.random()}`;
         if (isPdf(file)) {
+          let pageCount: number | undefined;
           try {
             const doc = await PDFDocument.load(await file.arrayBuffer());
-            return { id, file, kind: "pdf" as const, pageCount: doc.getPageCount() };
-          } catch {
-            return { id, file, kind: "pdf" as const };
-          }
+            pageCount = doc.getPageCount();
+          } catch { /* handled below */ }
+          return { id, file, kind: "pdf" as const, pageCount, thumbnail: null };
         } else {
-          const previewUrl = URL.createObjectURL(file);
-          previews.current.push(previewUrl);
-          return { id, file, kind: "image" as const, pageCount: 1, previewUrl };
+          const url = URL.createObjectURL(file);
+          objUrls.current.push(url);
+          return { id, file, kind: "image" as const, pageCount: 1, thumbnail: url };
         }
       }),
     );
-    setItems((p) => [...p, ...added]);
+    setItems((p) => [...p, ...newItems]);
   }, []);
 
-  const remove = (id: string) => {
+  const remove = (id: string) =>
     setItems((p) => {
       const item = p.find((i) => i.id === id);
-      if (item?.previewUrl) {
-        URL.revokeObjectURL(item.previewUrl);
-        previews.current = previews.current.filter((u) => u !== item.previewUrl);
+      if (item?.kind === "image" && item.thumbnail) {
+        URL.revokeObjectURL(item.thumbnail);
+        objUrls.current = objUrls.current.filter((u) => u !== item.thumbnail);
       }
       return p.filter((i) => i.id !== id);
     });
-  };
 
+  // DnD handlers
   const onDragStart = (i: number) => setDragIdx(i);
   const onDragEnd = () => { setDragIdx(null); setOverIdx(null); };
   const onDragOver = (e: DragEvent, i: number) => { e.preventDefault(); setOverIdx(i); };
@@ -284,8 +271,7 @@ function MergeView({
           await addImagePage(doc, item.file);
         }
       }
-      const bytes = await doc.save();
-      const url = URL.createObjectURL(new Blob([bytes], { type: "application/pdf" }));
+      const url = URL.createObjectURL(new Blob([await doc.save()], { type: "application/pdf" }));
       Object.assign(document.createElement("a"), { href: url, download: "merged.pdf" }).click();
       URL.revokeObjectURL(url);
       toast.success("PDFs mesclados!");
@@ -301,18 +287,12 @@ function MergeView({
 
   return (
     <div className="flex flex-col gap-4">
-      <button
-        onClick={onBack}
-        className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors w-fit"
-      >
+      <button onClick={onBack}
+        className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors w-fit">
         <ArrowLeft size={13} /> Voltar
       </button>
 
-      <DropZone
-        onFiles={addFiles}
-        compact
-        label="Adicionar mais arquivos"
-      />
+      <DropZone onFiles={addFiles} compact label="Adicionar mais arquivos" />
 
       {items.length > 0 && (
         <p className="text-xs text-muted-foreground">
@@ -330,46 +310,36 @@ function MergeView({
             onDragOver={(e) => onDragOver(e as unknown as DragEvent, i)}
             onDrop={(e) => onDrop(e as unknown as DragEvent, i)}
             className={cn(
-              "flex items-center gap-2 p-3 border rounded-lg bg-muted/30 transition-all",
+              "flex items-center gap-3 p-2.5 border rounded-lg bg-muted/30 transition-all select-none",
               dragIdx === i && "opacity-40",
               overIdx === i && dragIdx !== i && "ring-2 ring-primary ring-offset-1",
             )}
           >
-            <GripVertical
-              size={16}
-              className="text-muted-foreground shrink-0 cursor-grab active:cursor-grabbing"
-            />
-            <span className="text-xs text-muted-foreground w-5 text-center shrink-0">
-              {i + 1}
-            </span>
+            <GripVertical size={16} className="text-muted-foreground shrink-0 cursor-grab active:cursor-grabbing" />
+            <span className="text-xs text-muted-foreground w-4 text-center shrink-0">{i + 1}</span>
 
-            {item.previewUrl ? (
-              <img
-                src={item.previewUrl}
-                alt=""
-                className="h-9 w-9 object-cover rounded border shrink-0"
-              />
-            ) : (
-              <div className="h-9 w-9 flex items-center justify-center rounded border bg-muted shrink-0">
+            {/* Thumbnail */}
+            <div className="h-14 w-10 shrink-0 rounded overflow-hidden border bg-muted flex items-center justify-center">
+              {item.thumbnail === null ? (
+                <ThumbSkeleton className="w-full h-full" />
+              ) : item.thumbnail ? (
+                <img src={item.thumbnail} alt="" className="w-full h-full object-cover" />
+              ) : (
                 <FileText size={16} className="text-muted-foreground" />
-              </div>
-            )}
+              )}
+            </div>
 
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium truncate">{item.file.name}</p>
               <p className="text-xs text-muted-foreground">
                 {fmt(item.file.size)}
-                {item.pageCount != null &&
-                  ` · ${item.pageCount} pág${item.pageCount !== 1 ? "s" : ""}`}
+                {item.pageCount != null && ` · ${item.pageCount} pág${item.pageCount !== 1 ? "s" : ""}`}
               </p>
             </div>
 
-            <Button
-              variant="ghost"
-              size="icon"
+            <Button variant="ghost" size="icon"
               className="h-7 w-7 text-destructive hover:text-destructive shrink-0"
-              onClick={() => remove(item.id)}
-            >
+              onClick={() => remove(item.id)}>
               <Trash2 size={13} />
             </Button>
           </div>
@@ -378,7 +348,7 @@ function MergeView({
 
       <Button onClick={merge} disabled={merging || items.length < 2}>
         <Download size={15} />
-        {merging ? "Mesclando…" : `Baixar PDF mesclado`}
+        {merging ? "Mesclando…" : "Baixar PDF mesclado"}
       </Button>
     </div>
   );
@@ -386,36 +356,62 @@ function MergeView({
 
 // ─── split view ───────────────────────────────────────────────────────────────
 
-function SplitView({
-  file,
-  pageCount,
-  onBack,
-}: {
-  file: File;
-  pageCount: number;
-  onBack: () => void;
-}) {
-  const [range, setRange] = useState(`1-${pageCount}`);
+function SplitView({ file, pageCount, onBack }: { file: File; pageCount: number; onBack: () => void }) {
+  const [thumbs, setThumbs] = useState<Map<number, string>>(new Map());
+  const [selected, setSelected] = useState<Set<number>>(new Set());
   const [splitting, setSplitting] = useState(false);
 
-  const selected = parseRanges(range, pageCount);
+  // Render all page thumbnails progressively
+  useEffect(() => {
+    const controller = new AbortController();
+    (async () => {
+      try {
+        const pdfjs = await getPdfjs();
+        const bytes = await file.arrayBuffer();
+        const doc = await pdfjs.getDocument({ data: new Uint8Array(bytes) }).promise;
+        for (let n = 1; n <= pageCount; n++) {
+          if (controller.signal.aborted) break;
+          const page = await doc.getPage(n);
+          const vp = page.getViewport({ scale: 0.4 });
+          const canvas = document.createElement("canvas");
+          canvas.width = vp.width;
+          canvas.height = vp.height;
+          await page.render({ canvasContext: canvas.getContext("2d")!, viewport: vp }).promise;
+          const dataUrl = canvas.toDataURL("image/jpeg", 0.75);
+          setThumbs((prev) => new Map(prev).set(n, dataUrl));
+        }
+      } catch { /* silent */ }
+    })();
+    return () => controller.abort();
+  }, [file, pageCount]);
+
+  const toggle = (n: number) =>
+    setSelected((prev) => {
+      const next = new Set(prev);
+      next.has(n) ? next.delete(n) : next.add(n);
+      return next;
+    });
+
+  const selectAll = () => setSelected(new Set(Array.from({ length: pageCount }, (_, i) => i + 1)));
+  const clearAll = () => setSelected(new Set());
+
+  const selectedSorted = [...selected].sort((a, b) => a - b);
 
   const split = async () => {
-    if (selected.length === 0) { toast.error("Nenhuma página válida."); return; }
+    if (selectedSorted.length === 0) { toast.error("Selecione ao menos uma página."); return; }
     setSplitting(true);
     try {
       const src = await PDFDocument.load(await file.arrayBuffer());
       const out = await PDFDocument.create();
-      const copied = await out.copyPages(src, selected.map((n) => n - 1));
+      const copied = await out.copyPages(src, selectedSorted.map((n) => n - 1));
       copied.forEach((p) => out.addPage(p));
-      const bytes = await out.save();
-      const url = URL.createObjectURL(new Blob([bytes], { type: "application/pdf" }));
+      const url = URL.createObjectURL(new Blob([await out.save()], { type: "application/pdf" }));
       Object.assign(document.createElement("a"), {
         href: url,
         download: file.name.replace(/\.pdf$/i, "") + "-split.pdf",
       }).click();
       URL.revokeObjectURL(url);
-      toast.success(`${selected.length} página${selected.length !== 1 ? "s" : ""} exportada${selected.length !== 1 ? "s" : ""}!`);
+      toast.success(`${selectedSorted.length} página${selectedSorted.length !== 1 ? "s" : ""} exportada${selectedSorted.length !== 1 ? "s" : ""}!`);
     } catch (err) {
       console.error(err);
       toast.error("Erro ao dividir.");
@@ -426,38 +422,74 @@ function SplitView({
 
   return (
     <div className="flex flex-col gap-4">
-      <button
-        onClick={onBack}
-        className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors w-fit"
-      >
+      <button onClick={onBack}
+        className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors w-fit">
         <ArrowLeft size={13} /> Voltar
       </button>
 
-      <div className="p-3 border rounded-lg bg-muted/30 text-sm">
-        <p className="font-medium truncate">{file.name}</p>
-        <p className="text-xs text-muted-foreground mt-0.5">
-          {pageCount} página{pageCount !== 1 ? "s" : ""}
-        </p>
+      <div className="p-3 border rounded-lg bg-muted/30 text-sm flex items-center justify-between">
+        <div className="min-w-0">
+          <p className="font-medium truncate">{file.name}</p>
+          <p className="text-xs text-muted-foreground mt-0.5">{pageCount} página{pageCount !== 1 ? "s" : ""}</p>
+        </div>
+        <div className="flex gap-2 shrink-0 ml-4">
+          <Button variant="outline" size="sm" className="h-7 text-xs" onClick={selectAll}>
+            Todas
+          </Button>
+          <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={clearAll} disabled={selected.size === 0}>
+            Limpar
+          </Button>
+        </div>
       </div>
 
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="range">Páginas a extrair</Label>
-        <Input
-          id="range"
-          value={range}
-          onChange={(e) => setRange(e.target.value)}
-          placeholder="Ex: 1-3, 5, 7-9"
-        />
-        <p className="text-xs text-muted-foreground">
-          {selected.length > 0
-            ? `${selected.length} página${selected.length !== 1 ? "s" : ""} selecionada${selected.length !== 1 ? "s" : ""}: ${selected.join(", ")}`
-            : "Use vírgula para separar e hífen para intervalos."}
-        </p>
+      {/* Page grid */}
+      <div className="grid grid-cols-4 sm:grid-cols-5 gap-2">
+        {Array.from({ length: pageCount }, (_, i) => i + 1).map((n) => {
+          const isSelected = selected.has(n);
+          const thumb = thumbs.get(n);
+          return (
+            <button
+              key={n}
+              onClick={() => toggle(n)}
+              className={cn(
+                "relative flex flex-col items-center gap-1 rounded-lg border-2 overflow-hidden transition-all focus:outline-none",
+                isSelected
+                  ? "border-primary ring-1 ring-primary"
+                  : "border-transparent hover:border-foreground/30",
+              )}
+            >
+              {/* Thumbnail area — fixed aspect ratio to avoid layout shift */}
+              <div className="w-full aspect-[3/4] bg-muted flex items-center justify-center overflow-hidden">
+                {thumb ? (
+                  <img src={thumb} alt={`Página ${n}`} className="w-full h-full object-cover" />
+                ) : (
+                  <ThumbSkeleton className="w-full h-full" />
+                )}
+              </div>
+
+              {/* Page number */}
+              <span className="text-[10px] text-muted-foreground pb-1">{n}</span>
+
+              {/* Selection overlay */}
+              {isSelected && (
+                <div className="absolute inset-0 bg-primary/15 flex items-start justify-end p-1">
+                  <div className="bg-primary rounded-full p-0.5">
+                    <Check size={10} className="text-primary-foreground" strokeWidth={3} />
+                  </div>
+                </div>
+              )}
+            </button>
+          );
+        })}
       </div>
 
-      <Button onClick={split} disabled={splitting || selected.length === 0}>
+      <Button onClick={split} disabled={splitting || selected.size === 0}>
         <Download size={15} />
-        {splitting ? "Dividindo…" : "Baixar páginas selecionadas"}
+        {splitting
+          ? "Dividindo…"
+          : selected.size === 0
+          ? "Selecione páginas"
+          : `Baixar ${selected.size} página${selected.size !== 1 ? "s" : ""}`}
       </Button>
     </div>
   );
@@ -466,7 +498,7 @@ function SplitView({
 // ─── to-image view ────────────────────────────────────────────────────────────
 
 function ToImageView({ file, onBack }: { file: File; onBack: () => void }) {
-  const [pages, setPages] = useState<PageImage[]>([]);
+  const [pages, setPages] = useState<RenderedPage[]>([]);
   const [rendering, setRendering] = useState(false);
   const [scale, setScale] = useState(2);
   const fileRef = useRef(file);
@@ -475,10 +507,8 @@ function ToImageView({ file, onBack }: { file: File; onBack: () => void }) {
     setRendering(true);
     setPages([]);
     try {
-      const pdfjs = await import("pdfjs-dist");
-      pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
-      const doc = await pdfjs.getDocument({ data: await f.arrayBuffer() }).promise;
-      const out: PageImage[] = [];
+      const pdfjs = await getPdfjs();
+      const doc = await pdfjs.getDocument({ data: new Uint8Array(await f.arrayBuffer()) }).promise;
       for (let i = 1; i <= doc.numPages; i++) {
         const page = await doc.getPage(i);
         const vp = page.getViewport({ scale: s });
@@ -486,9 +516,8 @@ function ToImageView({ file, onBack }: { file: File; onBack: () => void }) {
         canvas.width = vp.width;
         canvas.height = vp.height;
         await page.render({ canvasContext: canvas.getContext("2d")!, viewport: vp }).promise;
-        out.push({ number: i, dataUrl: canvas.toDataURL("image/png") });
+        setPages((prev) => [...prev, { number: i, dataUrl: canvas.toDataURL("image/png") }]);
       }
-      setPages(out);
     } catch (err) {
       console.error(err);
       toast.error("Erro ao converter o PDF.");
@@ -499,12 +528,9 @@ function ToImageView({ file, onBack }: { file: File; onBack: () => void }) {
 
   useEffect(() => { render(fileRef.current, scale); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const changeScale = (v: number[]) => {
-    setScale(v[0]);
-    render(fileRef.current, v[0]);
-  };
+  const changeScale = (v: number[]) => { setScale(v[0]); render(fileRef.current, v[0]); };
 
-  const download = (page: PageImage) => {
+  const download = (page: RenderedPage) => {
     const name = file.name.replace(/\.pdf$/i, "");
     Object.assign(document.createElement("a"), {
       href: page.dataUrl,
@@ -512,14 +538,10 @@ function ToImageView({ file, onBack }: { file: File; onBack: () => void }) {
     }).click();
   };
 
-  const downloadAll = () => pages.forEach(download);
-
   return (
     <div className="flex flex-col gap-4">
-      <button
-        onClick={onBack}
-        className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors w-fit"
-      >
+      <button onClick={onBack}
+        className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors w-fit">
         <ArrowLeft size={13} /> Voltar
       </button>
 
@@ -529,45 +551,32 @@ function ToImageView({ file, onBack }: { file: File; onBack: () => void }) {
 
       <div className="flex flex-col gap-2">
         <Label>Qualidade · {scale}×</Label>
-        <Slider
-          min={1}
-          max={4}
-          step={0.5}
-          value={[scale]}
-          onValueChange={changeScale}
-          disabled={rendering}
-        />
-        <p className="text-xs text-muted-foreground">
-          1× = 72 dpi · 2× = 144 dpi · 4× = 288 dpi
-        </p>
+        <Slider min={1} max={4} step={0.5} value={[scale]}
+          onValueChange={changeScale} disabled={rendering} />
+        <p className="text-xs text-muted-foreground">1× = 72 dpi · 2× = 144 dpi · 4× = 288 dpi</p>
       </div>
 
-      {rendering && (
+      {rendering && pages.length === 0 && (
         <div className="flex items-center justify-center gap-2 py-8 text-muted-foreground text-sm">
-          <Loader2 size={16} className="animate-spin" />
-          Convertendo…
+          <Loader2 size={16} className="animate-spin" /> Convertendo…
         </div>
       )}
 
       {pages.length > 0 && (
         <>
-          <Button onClick={downloadAll} disabled={rendering}>
+          <Button onClick={() => pages.forEach(download)} disabled={rendering}>
             <Download size={15} />
-            Baixar todas ({pages.length} imagem{pages.length !== 1 ? "ns" : ""})
+            {rendering
+              ? `Convertendo… (${pages.length})`
+              : `Baixar todas (${pages.length} imagem${pages.length !== 1 ? "ns" : ""})`}
           </Button>
-
           <div className="flex flex-col gap-3">
             {pages.map((page) => (
               <div key={page.number} className="border rounded-xl overflow-hidden">
                 <img src={page.dataUrl} alt={`Página ${page.number}`} className="w-full h-auto" />
                 <div className="flex items-center justify-between px-3 py-2 bg-muted/30">
                   <span className="text-xs text-muted-foreground">Página {page.number}</span>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 text-xs gap-1"
-                    onClick={() => download(page)}
-                  >
+                  <Button variant="ghost" size="sm" className="h-7 text-xs gap-1" onClick={() => download(page)}>
                     <Download size={12} /> PNG
                   </Button>
                 </div>
@@ -599,7 +608,6 @@ export default function PdfTool() {
     const valid = files.filter((f) => isPdf(f) || isImage(f));
     if (!valid.length) return;
 
-    // Single PDF → choosing
     if (valid.length === 1 && isPdf(valid[0])) {
       try {
         const doc = await PDFDocument.load(await valid[0].arrayBuffer());
@@ -612,20 +620,17 @@ export default function PdfTool() {
       return;
     }
 
-    // Multiple or image → merge directly
+    // Multiple / image → straight to merge
     const items: MergeItem[] = await Promise.all(
       valid.map(async (file) => {
         const id = `${file.name}-${Date.now()}-${Math.random()}`;
         if (isPdf(file)) {
-          try {
-            const doc = await PDFDocument.load(await file.arrayBuffer());
-            return { id, file, kind: "pdf" as const, pageCount: doc.getPageCount() };
-          } catch {
-            return { id, file, kind: "pdf" as const };
-          }
+          let pageCount: number | undefined;
+          try { pageCount = (await PDFDocument.load(await file.arrayBuffer())).getPageCount(); } catch { /**/ }
+          return { id, file, kind: "pdf" as const, pageCount, thumbnail: null };
         } else {
-          const previewUrl = URL.createObjectURL(file);
-          return { id, file, kind: "image" as const, pageCount: 1, previewUrl };
+          const thumbnail = URL.createObjectURL(file);
+          return { id, file, kind: "image" as const, pageCount: 1, thumbnail };
         }
       }),
     );
@@ -633,13 +638,12 @@ export default function PdfTool() {
     setMode("merge");
   }, []);
 
-  // ── choosing: pre-load chosen file into merge items
   const goMerge = useCallback(async () => {
     if (!chosenFile) return;
     try {
       const doc = await PDFDocument.load(await chosenFile.arrayBuffer());
       setMergeInitial([
-        { id: `${chosenFile.name}-${Date.now()}`, file: chosenFile, kind: "pdf", pageCount: doc.getPageCount() },
+        { id: `${chosenFile.name}-${Date.now()}`, file: chosenFile, kind: "pdf", pageCount: doc.getPageCount(), thumbnail: null },
       ]);
       setMode("merge");
     } catch {
@@ -651,19 +655,14 @@ export default function PdfTool() {
     <div className="p-8 w-full min-h-screen">
       <div className="w-full md:max-w-[600px] mx-auto">
 
-        {mode === "idle" && (
-          <DropZone onFiles={handleInitialDrop} />
-        )}
+        {mode === "idle" && <DropZone onFiles={handleInitialDrop} />}
 
         {mode === "choosing" && chosenFile && (
           <div className="flex flex-col gap-4">
-            <button
-              onClick={reset}
-              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors w-fit"
-            >
+            <button onClick={reset}
+              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors w-fit">
               <ArrowLeft size={13} /> Novo arquivo
             </button>
-
             <div className="p-4 border rounded-xl bg-muted/30 flex items-center gap-3">
               <FileText size={24} className="text-muted-foreground shrink-0" />
               <div className="min-w-0">
@@ -673,35 +672,19 @@ export default function PdfTool() {
                 </p>
               </div>
             </div>
-
             <p className="text-xs text-muted-foreground">O que deseja fazer?</p>
-
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-              <ActionCard
-                icon={<FileStack size={20} />}
-                title="Mesclar"
-                description="Combine com outros PDFs ou imagens"
-                onClick={goMerge}
-              />
-              <ActionCard
-                icon={<Scissors size={20} />}
-                title="Dividir"
-                description="Extraia páginas específicas"
-                onClick={() => setMode("split")}
-              />
-              <ActionCard
-                icon={<FileImage size={20} />}
-                title="Para imagem"
-                description="Converta cada página em PNG"
-                onClick={() => setMode("to-image")}
-              />
+              <ActionCard icon={<FileStack size={20} />} title="Mesclar"
+                description="Combine com outros PDFs ou imagens" onClick={goMerge} />
+              <ActionCard icon={<Scissors size={20} />} title="Dividir"
+                description="Extraia páginas específicas" onClick={() => setMode("split")} />
+              <ActionCard icon={<FileImage size={20} />} title="Para imagem"
+                description="Converta cada página em PNG" onClick={() => setMode("to-image")} />
             </div>
           </div>
         )}
 
-        {mode === "merge" && (
-          <MergeView initial={mergeInitial} onBack={reset} />
-        )}
+        {mode === "merge" && <MergeView initial={mergeInitial} onBack={reset} />}
 
         {mode === "split" && chosenFile && (
           <SplitView file={chosenFile} pageCount={chosenPageCount} onBack={reset} />
