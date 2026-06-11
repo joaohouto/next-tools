@@ -1005,7 +1005,7 @@ export default function ImageTool() {
   const goMode = (m: ImageMode) => setMode(m);
 
   return (
-    <div className="p-8 w-full min-h-screen">
+    <div className={cn("p-8 w-full min-h-screen", mode === "idle" && "flex items-center justify-center")}>
       <div className="w-full md:max-w-[680px] mx-auto">
         {mode === "idle"         && <ImageDropZone onFiles={handleDrop} />}
         {mode === "choosing"     && <ChoosingView file={files[0]} onSelect={goMode} onBack={reset} />}

@@ -681,7 +681,7 @@ export default function PdfTool() {
   }, [chosenFile]);
 
   return (
-    <div className="p-8 w-full min-h-screen">
+    <div className={cn("p-8 w-full min-h-screen", mode === "idle" && "flex items-center justify-center")}>
       <div className="w-full md:max-w-[600px] mx-auto">
 
         {mode === "idle" && <DropZone onFiles={handleInitialDrop} />}
