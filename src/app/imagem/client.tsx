@@ -15,6 +15,7 @@ import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useDebounce } from "@/hooks/use-debounce";
+import { useLocalStorage } from "@/hooks/use-local-storage";
 
 // ─── types ────────────────────────────────────────────────────────────────────
 
@@ -518,6 +519,14 @@ function ConvertView({ initialFiles, onBack }: { initialFiles: File[]; onBack: (
 
 // ─── REMOVE BG VIEW ───────────────────────────────────────────────────────────
 
+type BgModel = "isnet_quint8" | "isnet_fp16" | "isnet";
+
+const BG_MODELS: { value: BgModel; label: string; size: string; hint: string }[] = [
+  { value: "isnet_quint8", label: "Rápido",      size: "~9 MB",  hint: "Boa qualidade" },
+  { value: "isnet_fp16",   label: "Balanceado",  size: "~18 MB", hint: "Qualidade superior" },
+  { value: "isnet",        label: "Preciso",     size: "~36 MB", hint: "Máxima qualidade" },
+];
+
 function RemoveBgView({ file, onBack }: { file: File; onBack: () => void }) {
   const [previewUrl] = useState(() => URL.createObjectURL(file));
   const [result, setResult] = useState<string | null>(null);
@@ -527,23 +536,27 @@ function RemoveBgView({ file, onBack }: { file: File; onBack: () => void }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [zoom, setZoom] = useState({ x: 0, y: 0, show: false });
   const resultUrlRef = useRef<string | null>(null);
+  const runRef = useRef(0);
+  const [model, setModel] = useLocalStorage<BgModel>("remove-bg-model", "isnet_quint8");
 
   useEffect(() => {
-    doRemoveBg();
+    doRemoveBg(model);
     return () => {
       URL.revokeObjectURL(previewUrl);
       if (resultUrlRef.current) URL.revokeObjectURL(resultUrlRef.current);
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const doRemoveBg = async () => {
+  const doRemoveBg = async (m: BgModel) => {
+    const id = ++runRef.current;
     setProcessing(true); setProgress(0); setProgressLabel("Carregando modelo…");
     const seen = new Map<string, [number, number]>();
     try {
       const { removeBackground } = await import("@imgly/background-removal");
       const blob = await removeBackground(file, {
-        model: "isnet_quint8",
+        model: m,
         progress: (key, current, total) => {
+          if (runRef.current !== id) return;
           seen.set(key, [current, total]);
           let c = 0, t = 0;
           for (const [cur, tot] of seen.values()) { c += cur; t += tot; }
@@ -554,17 +567,26 @@ function RemoveBgView({ file, onBack }: { file: File; onBack: () => void }) {
           }
         },
       });
+      if (runRef.current !== id) return;
       setProgress(100);
       if (resultUrlRef.current) URL.revokeObjectURL(resultUrlRef.current);
       resultUrlRef.current = URL.createObjectURL(blob);
       setResult(resultUrlRef.current);
     } catch (err) {
+      if (runRef.current !== id) return;
       console.error(err);
       toast.error("Erro ao remover fundo.");
     } finally {
-      setProcessing(false);
-      setTimeout(() => setProgress(0), 1000);
+      if (runRef.current === id) {
+        setProcessing(false);
+        setTimeout(() => setProgress(0), 1000);
+      }
     }
+  };
+
+  const handleModelChange = (m: BgModel) => {
+    setModel(m);
+    doRemoveBg(m);
   };
 
   const download = () => { if (!result) return; Object.assign(document.createElement("a"), { href: result, download: `${file.name.replace(/\.[^.]+$/, "")}-sem-fundo.png` }).click(); };
@@ -592,11 +614,33 @@ function RemoveBgView({ file, onBack }: { file: File; onBack: () => void }) {
             {progress > 0 && <Progress value={progress} className="h-1.5" />}
           </div>
         ) : (
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={doRemoveBg} disabled={processing}><RefreshCw size={14} /> Refazer</Button>
-            <div className="flex-1" />
-            <Button variant="outline" size="sm" onClick={copy} disabled={!result}><Copy size={14} /> Copiar</Button>
-            <Button size="sm" onClick={download} disabled={!result}><Download size={14} /> Baixar</Button>
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Modelo de IA</Label>
+              <div className="flex gap-2">
+                {BG_MODELS.map((m) => (
+                  <button key={m.value} onClick={() => handleModelChange(m.value)}
+                    className={cn(
+                      "flex-1 flex flex-col items-center gap-0.5 py-2 px-1 rounded-lg border text-center transition-all",
+                      model === m.value
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "hover:border-foreground/40 text-muted-foreground",
+                    )}>
+                    <span className="text-xs font-medium leading-tight">{m.label}</span>
+                    <span className={cn("text-[10px] leading-tight", model === m.value ? "text-primary-foreground/70" : "text-muted-foreground/60")}>{m.size}</span>
+                  </button>
+                ))}
+              </div>
+              <p className="text-[11px] text-muted-foreground/60">
+                {BG_MODELS.find((m) => m.value === model)?.hint} · Baixado uma vez e salvo em cache pelo navegador
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={() => doRemoveBg(model)} disabled={processing}><RefreshCw size={14} /> Refazer</Button>
+              <div className="flex-1" />
+              <Button variant="outline" size="sm" onClick={copy} disabled={!result}><Copy size={14} /> Copiar</Button>
+              <Button size="sm" onClick={download} disabled={!result}><Download size={14} /> Baixar</Button>
+            </div>
           </div>
         )}
       </ControlsBar>
