@@ -54,8 +54,8 @@ export default function OcrPage() {
   };
 
   return (
-    <div className="p-8 w-full min-h-screen">
-      <div className="w-full md:max-w-[680px] mx-auto flex flex-col content-center gap-4">
+    <div className={`p-8 w-full min-h-screen${!image ? " flex items-center justify-center" : ""}`}>
+      <div className="w-full md:max-w-[680px] mx-auto flex flex-col gap-4">
         <ImageDropzone
           isLoading={loading}
           onUpload={handleUpload}

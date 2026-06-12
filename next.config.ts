@@ -1,6 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  serverExternalPackages: ["tesseract.js"],
+  serverExternalPackages: ["tesseract.js", "pdfjs-dist"],
   async headers() {
     return [
       {

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 
 import { useHotkeys } from "react-hotkeys-hook";
 
-import { Circle, Command } from "lucide-react";
+import { Circle } from "lucide-react";
 
 import {
   CommandDialog,
@@ -18,13 +18,15 @@ import {
   CommandShortcut,
 } from "@/components/ui/command";
 import { useTheme } from "next-themes";
-import { PAGE_LIST } from "@/config/page-list";
+import { getSortedByUsage } from "@/config/page-list";
+import { useToolUsage } from "@/hooks/use-tool-usage";
 
 export function CommandMenu() {
   const [open, setOpen] = React.useState(false);
 
   const router = useRouter();
   const { theme, setTheme } = useTheme();
+  const { usage, trackUsage } = useToolUsage();
 
   const hotKeysOptions = {
     preventDefault: true,
@@ -81,16 +83,19 @@ export function CommandMenu() {
     },
   ];
 
+  const sortedList = getSortedByUsage(usage);
+
   return (
     <CommandDialog open={open} onOpenChange={setOpen}>
       <CommandInput placeholder="Pesquisar..." />
       <CommandList>
         <CommandEmpty>Sem resultados.</CommandEmpty>
         <CommandGroup heading="Páginas">
-          {PAGE_LIST.map((page) => (
+          {sortedList.map((page) => (
             <CommandItem
               key={page.path}
               onSelect={() => {
+                trackUsage(page.path);
                 router.push(page.path);
                 setOpen(false);
               }}
