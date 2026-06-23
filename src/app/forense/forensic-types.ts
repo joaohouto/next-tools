@@ -142,6 +142,7 @@ export interface ForensicResult {
   zipEntries?: ZipEntry[];
   strings?: string[];
   imageAnalysis?: ImageAnalysis;
+  ela?: import("./forensic-ela").ElaResult;
   corruption?: CorruptionCheck;
   privacyScore?: number;
   flags?: ForensicFlag[];

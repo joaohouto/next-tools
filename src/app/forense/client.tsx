@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import {
-  Shield, ShieldAlert, ShieldCheck, MapPin, FileText, Image,
+  ShieldAlert, MapPin, FileText, Image,
   Music, Archive, Copy, Download, RefreshCw, AlertTriangle,
   CheckCircle, Info, Fingerprint, Hash, BarChart2,
-  Eye, ScanSearch, ExternalLink,
+  Eye, ScanSearch, ExternalLink, GitCompare, Clock, Zap,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -14,8 +14,9 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import {
-  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend,
+  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
 } from "recharts";
 import FileDropzone from "@/components/file-dropzone";
 import { formatBytes, cn } from "@/lib/utils";
@@ -27,11 +28,17 @@ import { extractOfficeMeta } from "./forensic-office";
 import { extractMediaMeta } from "./forensic-media";
 import { listZipEntries } from "./forensic-zip";
 import { checkCorruption } from "./forensic-corruption";
+import { computeEla } from "./forensic-ela";
+import type { ElaResult } from "./forensic-ela";
+import { CompareView } from "./compare-view";
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
 function isImage(file: File) {
   return file.type.startsWith("image/") || /\.(jpe?g|png|webp|tiff?|heic|gif|bmp)$/i.test(file.name);
+}
+function isJpeg(file: File) {
+  return file.type === "image/jpeg" || /\.jpe?g$/i.test(file.name);
 }
 function isPdf(file: File) {
   return file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
@@ -74,6 +81,58 @@ function orientationTransform(o?: number): string {
   };
   return o !== undefined ? (transforms[o] ?? "none") : "none";
 }
+
+// ─── useObjectURL — creates one URL per file, revokes on cleanup ──────────────
+
+function useObjectURL(file: File | undefined): string | undefined {
+  const [url, setUrl] = useState<string | undefined>();
+  useEffect(() => {
+    if (!file) { setUrl(undefined); return; }
+    const u = URL.createObjectURL(file);
+    setUrl(u);
+    return () => { URL.revokeObjectURL(u); };
+  }, [file]);
+  return url;
+}
+
+// ─── Timeline ─────────────────────────────────────────────────────────────────
+
+interface TimelineEntry {
+  label: string;
+  date: Date;
+  source: "filesystem" | "exif" | "metadata";
+}
+
+function buildTimeline(result: ForensicResult): TimelineEntry[] {
+  const entries: TimelineEntry[] = [];
+  const push = (label: string, source: TimelineEntry["source"], raw?: string | Date) => {
+    if (!raw) return;
+    const d = raw instanceof Date ? raw : new Date(raw);
+    if (!isNaN(d.getTime())) entries.push({ label, date: d, source });
+  };
+  push("Modificado (sistema de arquivos)", "filesystem", result.basic?.lastModified);
+  push("Data original (EXIF)", "exif", result.exif?.dateTimeOriginal);
+  push("Data digitalização (EXIF)", "exif", result.exif?.dateTimeDigitized);
+  push("Data de modificação (EXIF)", "exif", result.exif?.dateTime);
+  push("Criação do PDF", "metadata", result.pdfMeta?.creationDate);
+  push("Modificação do PDF", "metadata", result.pdfMeta?.modDate);
+  push("Criação do documento", "metadata", result.officeMeta?.created);
+  push("Modificação do documento", "metadata", result.officeMeta?.modified);
+  return entries.sort((a, b) => a.date.getTime() - b.date.getTime());
+}
+
+function formatTimeRange(ms: number): string {
+  const days = Math.floor(ms / 86_400_000);
+  const hours = Math.floor((ms % 86_400_000) / 3_600_000);
+  const mins = Math.floor((ms % 3_600_000) / 60_000);
+  const years = Math.floor(days / 365);
+  if (years > 0) return `${years} ano${years !== 1 ? "s" : ""} e ${days % 365} dia${days % 365 !== 1 ? "s" : ""}`;
+  if (days > 0) return `${days} dia${days !== 1 ? "s" : ""} e ${hours}h`;
+  if (hours > 0) return `${hours}h ${mins}min`;
+  return `${mins}min`;
+}
+
+// ─── Flags & privacy ──────────────────────────────────────────────────────────
 
 function buildFlags(result: ForensicResult): ForensicFlag[] {
   const flags: ForensicFlag[] = [];
@@ -213,14 +272,12 @@ async function processFile(
   const buffer = await file.arrayBuffer();
   const u8 = new Uint8Array(buffer);
 
-  // Phase 1: hashes + entropy + strings (parallel)
   const [basic, strings] = await Promise.all([
     computeBasicInfo(file, buffer),
     Promise.resolve(extractStrings(u8)),
   ]);
   onProgress({ basic, strings, status: "processing" });
 
-  // Phase 2: type-specific extraction + integrity check (all in parallel)
   let exif: ForensicResult["exif"] | undefined;
   let pdfMeta: ForensicResult["pdfMeta"] | undefined;
   let officeMeta: ForensicResult["officeMeta"] | undefined;
@@ -250,7 +307,6 @@ async function processFile(
     tasks.push(Promise.resolve().then(() => { zipEntries = isZip(file) ? listZipEntries(u8) : undefined; }));
   }
 
-  // Integrity check runs for all file types
   tasks.push(checkCorruption(file, u8).then((c) => { corruption = c; }).catch(() => {}));
 
   await Promise.allSettled(tasks);
@@ -299,7 +355,7 @@ function SectionTitle({ icon, children }: { icon?: React.ReactNode; children: Re
 const CORRUPTION_CONFIG: Record<CorruptionCheck["status"], { label: string; className: string }> = {
   ok:        { label: "Íntegro",         className: "bg-green-600 text-white hover:bg-green-600" },
   warning:   { label: "Aviso",           className: "bg-yellow-500 text-white hover:bg-yellow-500" },
-  corrupted: { label: "Corrompido",      className: "" }, // uses destructive variant
+  corrupted: { label: "Corrompido",      className: "" },
   unknown:   { label: "Não verificável", className: "border-muted-foreground text-muted-foreground" },
 };
 
@@ -331,7 +387,6 @@ function FlagItem({ flag }: { flag: ForensicFlag }) {
 // ─── Histogram chart ──────────────────────────────────────────────────────────
 
 function HistogramChart({ histogram }: { histogram: { r: number[]; g: number[]; b: number[] } }) {
-  // Sample every 4 bins for readability (64 bars)
   const data = Array.from({ length: 64 }, (_, i) => {
     const bin = i * 4;
     const r = histogram.r.slice(bin, bin + 4).reduce((a, b) => a + b, 0);
@@ -354,7 +409,7 @@ function HistogramChart({ histogram }: { histogram: { r: number[]; g: number[]; 
   );
 }
 
-// ─── Tabs content ─────────────────────────────────────────────────────────────
+// ─── Tab: Geral ───────────────────────────────────────────────────────────────
 
 function TabGeral({ result }: { result: ForensicResult }) {
   const { basic, imageAnalysis } = result;
@@ -421,36 +476,108 @@ function TabGeral({ result }: { result: ForensicResult }) {
   );
 }
 
+// ─── Tab: Metadados ───────────────────────────────────────────────────────────
+
 function TabMetadata({ result }: { result: ForensicResult }) {
   const { exif, pdfMeta, officeMeta, mediaMeta, zipEntries, file } = result;
+  const imageUrl = useObjectURL(file && isImage(file) ? file : undefined);
+  const [elaResult, setElaResult] = useState<ElaResult | null>(null);
+  const [elaLoading, setElaLoading] = useState(false);
+
+  const runEla = useCallback(async () => {
+    if (!file) return;
+    setElaLoading(true);
+    try {
+      const r = await computeEla(file);
+      setElaResult(r);
+    } catch {
+      toast.error("Falha ao computar ELA");
+    } finally {
+      setElaLoading(false);
+    }
+  }, [file]);
+
+  // Reset ELA when file changes
+  useEffect(() => { setElaResult(null); }, [file]);
 
   return (
     <div className="space-y-1">
-      {/* Image preview + EXIF */}
-      {exif && file && (
-        <>
-          {/* Preview */}
-          {isImage(file) && (
-            <div className="mb-4 flex gap-4 flex-wrap">
-              <div className="relative w-fit">
+      {/* Image preview with resizable split */}
+      {exif && file && isImage(file) && imageUrl && (
+        <div className="mb-4 space-y-3">
+          <ResizablePanelGroup direction="horizontal" className="min-h-[180px] rounded-lg border overflow-hidden">
+            <ResizablePanel defaultSize={45} minSize={20}>
+              <div className="flex items-center justify-center h-full p-2 bg-muted/20">
                 <img
-                  src={URL.createObjectURL(file)}
+                  src={imageUrl}
                   alt="Preview"
-                  className="max-h-48 max-w-full rounded-lg border object-contain"
+                  className="max-h-52 max-w-full rounded object-contain"
                   style={{ transform: orientationTransform(exif.orientation) }}
                 />
-                <Badge className="absolute top-1 right-1 text-xs opacity-80">
-                  {exif.width && exif.height ? `${exif.width}×${exif.height}` : ""}
-                </Badge>
               </div>
-              {exif.thumbnail && (
-                <div>
-                  <p className="text-xs text-muted-foreground mb-1">Miniatura EXIF</p>
-                  <img src={exif.thumbnail} alt="EXIF thumbnail" className="max-h-24 rounded border" />
+            </ResizablePanel>
+            <ResizableHandle withHandle />
+            <ResizablePanel defaultSize={55} minSize={25}>
+              <div className="p-3 h-full overflow-auto space-y-2">
+                <div className="flex flex-wrap gap-1.5">
+                  {exif.width && exif.height && (
+                    <Badge variant="outline" className="text-xs">{exif.width}×{exif.height}</Badge>
+                  )}
+                  {exif.make && <Badge variant="outline" className="text-xs">{exif.make}</Badge>}
                 </div>
-              )}
+
+                {exif.thumbnail && (
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-1">Miniatura EXIF</p>
+                    <img src={exif.thumbnail} alt="EXIF thumbnail" className="max-h-16 rounded border" />
+                  </div>
+                )}
+
+                {/* ELA trigger (JPEG only) */}
+                {isJpeg(file) && !elaResult && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="text-xs w-full"
+                    onClick={runEla}
+                    disabled={elaLoading}
+                  >
+                    {elaLoading
+                      ? <><div className="animate-spin rounded-full border-2 border-border border-t-foreground h-3 w-3 mr-1.5" />Computando ELA…</>
+                      : <><Zap size={12} className="mr-1.5" />Analisar com ELA</>
+                    }
+                  </Button>
+                )}
+              </div>
+            </ResizablePanel>
+          </ResizablePanelGroup>
+
+          {/* ELA result — full width below the panel */}
+          {elaResult && (
+            <div className="rounded-lg border overflow-hidden">
+              <div className="flex items-center justify-between px-3 py-2 bg-muted/30 border-b">
+                <p className="text-xs font-semibold">Error Level Analysis (ELA)</p>
+                <div className="flex items-center gap-3">
+                  <span className="text-xs text-muted-foreground">
+                    Escala ×{elaResult.scale} · Qualidade {Math.round(elaResult.quality * 100)}% · Erro máx. {elaResult.maxError}/255
+                  </span>
+                  <Button size="sm" variant="ghost" className="h-6 px-2 text-xs" onClick={runEla} disabled={elaLoading}>
+                    <RefreshCw size={11} className="mr-1" />Reanalisar
+                  </Button>
+                </div>
+              </div>
+              <img src={elaResult.dataUrl} alt="ELA" className="w-full" />
+              <p className="px-3 py-2 text-xs text-muted-foreground bg-muted/10">
+                Regiões mais brilhantes indicam maior discrepância após recompressão — possível evidência de edição.
+              </p>
             </div>
           )}
+        </div>
+      )}
+
+      {/* EXIF fields */}
+      {exif && (
+        <>
           <SectionTitle icon={<Image size={14} />}>EXIF</SectionTitle>
           <Row label="Câmera (marca)" value={exif.make} />
           <Row label="Câmera (modelo)" value={exif.model} />
@@ -597,6 +724,8 @@ function TabMetadata({ result }: { result: ForensicResult }) {
   );
 }
 
+// ─── Tab: Strings ─────────────────────────────────────────────────────────────
+
 function TabStrings({ strings }: { strings: string[] }) {
   const [page, setPage] = useState(0);
   const PER_PAGE = 50;
@@ -632,6 +761,8 @@ function TabStrings({ strings }: { strings: string[] }) {
   );
 }
 
+// ─── Tab: Localização ─────────────────────────────────────────────────────────
+
 function TabLocation({ result }: { result: ForensicResult }) {
   const gps = result.exif?.gps;
   if (!gps) return <p className="text-muted-foreground text-sm py-4 text-center">Nenhuma informação de localização GPS encontrada.</p>;
@@ -662,13 +793,75 @@ function TabLocation({ result }: { result: ForensicResult }) {
   );
 }
 
+// ─── Tab: Timeline ────────────────────────────────────────────────────────────
+
+const SOURCE_DOT: Record<TimelineEntry["source"], string> = {
+  filesystem: "bg-blue-500",
+  exif: "bg-purple-500",
+  metadata: "bg-orange-500",
+};
+const SOURCE_TEXT: Record<TimelineEntry["source"], string> = {
+  filesystem: "text-blue-500",
+  exif: "text-purple-500",
+  metadata: "text-orange-500",
+};
+
+function TabTimeline({ result }: { result: ForensicResult }) {
+  const entries = buildTimeline(result);
+  if (entries.length === 0) {
+    return <p className="text-muted-foreground text-sm py-4 text-center">Nenhuma data encontrada nos metadados.</p>;
+  }
+
+  const earliest = entries[0].date;
+  const latest = entries[entries.length - 1].date;
+  const range = latest.getTime() - earliest.getTime();
+
+  return (
+    <div className="space-y-4">
+      {/* Legend */}
+      <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
+        <div className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-blue-500 inline-block" />Sistema de arquivos</div>
+        <div className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-purple-500 inline-block" />EXIF</div>
+        <div className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-orange-500 inline-block" />Metadados</div>
+      </div>
+
+      {/* Timeline */}
+      <div className="relative">
+        {entries.map((entry, idx) => (
+          <div key={idx} className="flex items-start gap-3 pb-5 relative">
+            {idx < entries.length - 1 && (
+              <div className="absolute left-[6px] top-3.5 bottom-0 w-px bg-border" />
+            )}
+            <div className={cn("w-3.5 h-3.5 rounded-full border-2 border-background mt-0.5 shrink-0 z-10", SOURCE_DOT[entry.source])} />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium leading-none">{entry.label}</p>
+              <p className={cn("text-xs mt-1 font-mono", SOURCE_TEXT[entry.source])}>
+                {entry.date.toLocaleString("pt-BR")}
+              </p>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Range summary */}
+      {entries.length >= 2 && range > 60_000 && (
+        <div className="rounded-md border p-3 bg-muted/30 text-xs text-muted-foreground">
+          Diferença entre data mais antiga e mais recente:{" "}
+          <span className="font-mono font-semibold text-foreground">{formatTimeRange(range)}</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Tab: Forense ─────────────────────────────────────────────────────────────
+
 function TabForensic({ result }: { result: ForensicResult }) {
   const { privacyScore = 0, flags = [], imageAnalysis, corruption } = result;
   const activeFlags = flags.filter(f => f.active);
 
   return (
     <div className="space-y-4">
-      {/* Integrity check block */}
       {corruption && (
         <div className={cn(
           "rounded-lg border p-3 space-y-2",
@@ -683,9 +876,7 @@ function TabForensic({ result }: { result: ForensicResult }) {
           <ul className="space-y-1">
             {corruption.details.map((d, i) => (
               <li key={i} className="flex items-start gap-1.5 text-xs text-muted-foreground">
-                <span className="mt-0.5 shrink-0">
-                  {corruption.status === "ok" ? "✓" : "•"}
-                </span>
+                <span className="mt-0.5 shrink-0">{corruption.status === "ok" ? "✓" : "•"}</span>
                 <span>{d}</span>
               </li>
             ))}
@@ -693,7 +884,6 @@ function TabForensic({ result }: { result: ForensicResult }) {
         </div>
       )}
 
-      {/* Privacy score */}
       <div>
         <p className="text-sm text-muted-foreground mb-2">Score de Privacidade</p>
         <div className="flex items-center gap-3">
@@ -731,16 +921,18 @@ function TabForensic({ result }: { result: ForensicResult }) {
 
 export default function ForenseClient() {
   const [result, setResult] = useState<ForensicResult>({ status: "idle" });
-
+  const [compareResult, setCompareResult] = useState<ForensicResult | null>(null);
+  const [compareMode, setCompareMode] = useState(false);
 
   const handleUpload = useCallback(async (files: File[]) => {
     const file = files[0];
     if (!file) return;
 
-    // Revoke previous cover URL if any
     if (result.mediaMeta?.id3?.coverUrl) URL.revokeObjectURL(result.mediaMeta.id3.coverUrl);
 
     setResult({ status: "processing", file });
+    setCompareResult(null);
+    setCompareMode(false);
 
     try {
       await processFile(file, (partial) => {
@@ -753,10 +945,42 @@ export default function ForenseClient() {
     }
   }, [result.mediaMeta?.id3?.coverUrl]);
 
+  const handleCompareUpload = useCallback(async (files: File[]) => {
+    const file = files[0];
+    if (!file) return;
+
+    if (compareResult?.mediaMeta?.id3?.coverUrl) URL.revokeObjectURL(compareResult.mediaMeta.id3.coverUrl);
+
+    setCompareResult({ status: "processing", file });
+
+    try {
+      await processFile(file, (partial) => {
+        setCompareResult(prev => prev ? { ...prev, ...partial, file } : { ...partial, file, status: "processing" });
+      });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Erro desconhecido";
+      toast.error(`Falha no processamento do 2º arquivo: ${msg}`);
+      setCompareResult({ status: "error", file, error: msg });
+    }
+  }, [compareResult?.mediaMeta?.id3?.coverUrl]);
+
+  const toggleCompare = useCallback(() => {
+    if (compareMode) {
+      if (compareResult?.mediaMeta?.id3?.coverUrl) URL.revokeObjectURL(compareResult.mediaMeta.id3.coverUrl);
+      setCompareResult(null);
+      setCompareMode(false);
+    } else {
+      setCompareMode(true);
+    }
+  }, [compareMode, compareResult]);
+
   const reset = useCallback(() => {
     if (result.mediaMeta?.id3?.coverUrl) URL.revokeObjectURL(result.mediaMeta.id3.coverUrl);
+    if (compareResult?.mediaMeta?.id3?.coverUrl) URL.revokeObjectURL(compareResult.mediaMeta.id3.coverUrl);
     setResult({ status: "idle" });
-  }, [result.mediaMeta?.id3?.coverUrl]);
+    setCompareResult(null);
+    setCompareMode(false);
+  }, [result.mediaMeta?.id3?.coverUrl, compareResult?.mediaMeta?.id3?.coverUrl]);
 
   const exportJson = useCallback(() => {
     if (!result.basic) return;
@@ -798,6 +1022,9 @@ export default function ForenseClient() {
   }, [result]);
 
   const hasGps = !!result.exif?.gps;
+  const timeline = buildTimeline(result);
+  const hasTimeline = timeline.length >= 2;
+  const compareReady = compareResult?.status === "done";
 
   if (result.status === "idle" || result.status === "error") {
     return (
@@ -845,6 +1072,15 @@ export default function ForenseClient() {
         <div className="flex gap-2 flex-wrap">
           <Button size="sm" variant="outline" onClick={exportJson} disabled={!result.basic}><Download size={13} className="mr-1.5" />JSON</Button>
           <Button size="sm" variant="outline" onClick={copyJson} disabled={!result.basic}><Copy size={13} className="mr-1.5" />Copiar</Button>
+          <Button
+            size="sm"
+            variant={compareMode ? "default" : "outline"}
+            onClick={toggleCompare}
+            disabled={isProcessing}
+          >
+            <GitCompare size={13} className="mr-1.5" />
+            {compareMode ? "Fechar comparação" : "Comparar"}
+          </Button>
           <Button size="sm" variant="ghost" onClick={reset}><RefreshCw size={13} className="mr-1.5" />Novo</Button>
         </div>
       </div>
@@ -858,7 +1094,17 @@ export default function ForenseClient() {
           <TabsTrigger value="metadados" className="text-xs">Metadados</TabsTrigger>
           <TabsTrigger value="strings" className="text-xs">Strings</TabsTrigger>
           {hasGps && <TabsTrigger value="localizacao" className="text-xs">Localização</TabsTrigger>}
+          {hasTimeline && (
+            <TabsTrigger value="timeline" className="text-xs">
+              <Clock size={11} className="mr-1" />Timeline
+            </TabsTrigger>
+          )}
           <TabsTrigger value="forense" className="text-xs">Forense</TabsTrigger>
+          {compareMode && (
+            <TabsTrigger value="comparar" className="text-xs">
+              <GitCompare size={11} className="mr-1" />Comparar
+            </TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent value="geral" className="mt-4">
@@ -881,9 +1127,40 @@ export default function ForenseClient() {
           </TabsContent>
         )}
 
+        {hasTimeline && (
+          <TabsContent value="timeline" className="mt-4">
+            <TabTimeline result={result} />
+          </TabsContent>
+        )}
+
         <TabsContent value="forense" className="mt-4">
           <TabForensic result={result} />
         </TabsContent>
+
+        {compareMode && (
+          <TabsContent value="comparar" className="mt-4">
+            {!compareResult || compareResult.status === "idle" ? (
+              <div className="space-y-3">
+                <p className="text-sm text-muted-foreground">Selecione um segundo arquivo para comparar com <span className="font-medium text-foreground">{file.name}</span>.</p>
+                <FileDropzone onUpload={handleCompareUpload} accept="*/*" label="Arraste ou clique para selecionar o segundo arquivo" />
+              </div>
+            ) : compareResult.status === "processing" && !compareResult.basic ? (
+              <div className="flex flex-col items-center gap-3 py-12">
+                <div className="animate-spin rounded-full border-4 border-border border-t-foreground h-10 w-10" />
+                <p className="text-muted-foreground text-sm">Processando segundo arquivo…</p>
+              </div>
+            ) : compareReady ? (
+              <CompareView a={result} b={compareResult} />
+            ) : (
+              <div className="space-y-3">
+                {compareResult.status === "error" && (
+                  <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">{compareResult.error}</div>
+                )}
+                <FileDropzone onUpload={handleCompareUpload} accept="*/*" label="Tentar com outro arquivo" />
+              </div>
+            )}
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );
