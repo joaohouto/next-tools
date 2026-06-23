@@ -4,6 +4,7 @@ import {
   NotepadText,
   QrCode,
   Ruler,
+  ScanSearch,
   ScanText,
   SquareTerminal,
   Timer,
@@ -45,6 +46,7 @@ export const UNORDERED_LIST = [
   { title: "Webcam",          path: "/webcam",       icon: <Camera />,    category: "Utilidades" as PageCategory },
   { title: "Estúdio de Ícone",path: "/icon",         icon: <Atom />,      category: "Utilidades" as PageCategory },
   { title: "PDF",             path: "/pdf",          icon: <FileText />,  category: "Utilidades" as PageCategory },
+  { title: "Analisador Forense", path: "/forense",  icon: <ScanSearch />,category: "Utilidades" as PageCategory },
 ];
 
 export const PAGE_LIST = [...UNORDERED_LIST].sort((a, b) =>
