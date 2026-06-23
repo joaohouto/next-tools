@@ -19,13 +19,14 @@ import {
 } from "recharts";
 import FileDropzone from "@/components/file-dropzone";
 import { formatBytes, cn } from "@/lib/utils";
-import type { ForensicResult, ForensicFlag } from "./forensic-types";
+import type { ForensicResult, ForensicFlag, CorruptionCheck } from "./forensic-types";
 import { computeBasicInfo, extractStrings } from "./forensic-engine";
 import { extractExif, analyzeImage } from "./forensic-exif";
 import { extractPdfMeta } from "./forensic-pdf";
 import { extractOfficeMeta } from "./forensic-office";
 import { extractMediaMeta } from "./forensic-media";
 import { listZipEntries } from "./forensic-zip";
+import { checkCorruption } from "./forensic-corruption";
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
@@ -76,7 +77,23 @@ function orientationTransform(o?: number): string {
 
 function buildFlags(result: ForensicResult): ForensicFlag[] {
   const flags: ForensicFlag[] = [];
-  const { basic, exif, pdfMeta, officeMeta, imageAnalysis } = result;
+  const { basic, exif, pdfMeta, officeMeta, imageAnalysis, corruption } = result;
+
+  flags.push({
+    id: "corrupted",
+    label: "Arquivo corrompido",
+    description: "A verificação estrutural detectou inconsistências definitivas — o arquivo pode não ser legível por todos os leitores.",
+    severity: "danger",
+    active: corruption?.status === "corrupted",
+  });
+
+  flags.push({
+    id: "integrity_warning",
+    label: "Aviso de integridade",
+    description: "A verificação detectou anomalias leves (ex.: marcador de fim ausente) — o arquivo pode estar incompleto.",
+    severity: "warning",
+    active: corruption?.status === "warning",
+  });
 
   flags.push({
     id: "gps",
@@ -203,13 +220,14 @@ async function processFile(
   ]);
   onProgress({ basic, strings, status: "processing" });
 
-  // Phase 2: type-specific extraction
+  // Phase 2: type-specific extraction + integrity check (all in parallel)
   let exif: ForensicResult["exif"] | undefined;
   let pdfMeta: ForensicResult["pdfMeta"] | undefined;
   let officeMeta: ForensicResult["officeMeta"] | undefined;
   let mediaMeta: ForensicResult["mediaMeta"] | undefined;
   let zipEntries: ForensicResult["zipEntries"] | undefined;
   let imageAnalysis: ForensicResult["imageAnalysis"] | undefined;
+  let corruption: ForensicResult["corruption"] | undefined;
 
   const tasks: Promise<void>[] = [];
 
@@ -232,12 +250,15 @@ async function processFile(
     tasks.push(Promise.resolve().then(() => { zipEntries = isZip(file) ? listZipEntries(u8) : undefined; }));
   }
 
+  // Integrity check runs for all file types
+  tasks.push(checkCorruption(file, u8).then((c) => { corruption = c; }).catch(() => {}));
+
   await Promise.allSettled(tasks);
 
-  const partial: ForensicResult = { file, basic, strings, exif, pdfMeta, officeMeta, mediaMeta, zipEntries, imageAnalysis, status: "processing" };
+  const partial: ForensicResult = { file, basic, strings, exif, pdfMeta, officeMeta, mediaMeta, zipEntries, imageAnalysis, corruption, status: "processing" };
   const privacyScore = buildPrivacyScore(partial);
   const flags = buildFlags(partial);
-  onProgress({ exif, pdfMeta, officeMeta, mediaMeta, zipEntries, imageAnalysis, privacyScore, flags, status: "done" });
+  onProgress({ exif, pdfMeta, officeMeta, mediaMeta, zipEntries, imageAnalysis, corruption, privacyScore, flags, status: "done" });
 }
 
 // ─── UI helpers ───────────────────────────────────────────────────────────────
@@ -273,6 +294,19 @@ function SectionTitle({ icon, children }: { icon?: React.ReactNode; children: Re
       <span>{children}</span>
     </div>
   );
+}
+
+const CORRUPTION_CONFIG: Record<CorruptionCheck["status"], { label: string; className: string }> = {
+  ok:        { label: "Íntegro",         className: "bg-green-600 text-white hover:bg-green-600" },
+  warning:   { label: "Aviso",           className: "bg-yellow-500 text-white hover:bg-yellow-500" },
+  corrupted: { label: "Corrompido",      className: "" }, // uses destructive variant
+  unknown:   { label: "Não verificável", className: "border-muted-foreground text-muted-foreground" },
+};
+
+function CorruptionBadge({ status }: { status: CorruptionCheck["status"] }) {
+  const cfg = CORRUPTION_CONFIG[status];
+  if (status === "corrupted") return <Badge variant="destructive">{cfg.label}</Badge>;
+  return <Badge variant="outline" className={cfg.className}>{cfg.label}</Badge>;
 }
 
 function PrivacyBadge({ score }: { score: number }) {
@@ -629,11 +663,37 @@ function TabLocation({ result }: { result: ForensicResult }) {
 }
 
 function TabForensic({ result }: { result: ForensicResult }) {
-  const { privacyScore = 0, flags = [], imageAnalysis } = result;
+  const { privacyScore = 0, flags = [], imageAnalysis, corruption } = result;
   const activeFlags = flags.filter(f => f.active);
 
   return (
     <div className="space-y-4">
+      {/* Integrity check block */}
+      {corruption && (
+        <div className={cn(
+          "rounded-lg border p-3 space-y-2",
+          corruption.status === "corrupted" && "border-destructive/60 bg-destructive/5",
+          corruption.status === "warning"   && "border-yellow-500/60 bg-yellow-500/5",
+          corruption.status === "ok"        && "border-green-600/40 bg-green-600/5",
+        )}>
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-semibold">Integridade do arquivo</span>
+            <CorruptionBadge status={corruption.status} />
+          </div>
+          <ul className="space-y-1">
+            {corruption.details.map((d, i) => (
+              <li key={i} className="flex items-start gap-1.5 text-xs text-muted-foreground">
+                <span className="mt-0.5 shrink-0">
+                  {corruption.status === "ok" ? "✓" : "•"}
+                </span>
+                <span>{d}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* Privacy score */}
       <div>
         <p className="text-sm text-muted-foreground mb-2">Score de Privacidade</p>
         <div className="flex items-center gap-3">
@@ -647,7 +707,7 @@ function TabForensic({ result }: { result: ForensicResult }) {
       {imageAnalysis && (
         <div className="flex items-center gap-2">
           <span className="text-sm text-muted-foreground">Esteganografia:</span>
-          <Badge variant={imageAnalysis.steganography === "suspicious" ? "destructive" : "outline"} className="text-xs capitalize">
+          <Badge variant={imageAnalysis.steganography === "suspicious" ? "destructive" : "outline"} className="text-xs">
             {imageAnalysis.steganography === "unlikely" ? "Improvável" : imageAnalysis.steganography === "inconclusive" ? "Inconclusivo" : "Suspeito"}
           </Badge>
         </div>
@@ -702,6 +762,7 @@ export default function ForenseClient() {
     if (!result.basic) return;
     const exportable = {
       basic: result.basic,
+      corruption: result.corruption,
       exif: result.exif,
       pdfMeta: result.pdfMeta,
       officeMeta: result.officeMeta,
@@ -723,6 +784,7 @@ export default function ForenseClient() {
     if (!result.basic) return;
     const exportable = {
       basic: result.basic,
+      corruption: result.corruption,
       exif: result.exif,
       pdfMeta: result.pdfMeta,
       officeMeta: result.officeMeta,

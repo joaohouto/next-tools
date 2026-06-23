@@ -123,6 +123,14 @@ export interface ForensicFlag {
   active: boolean;
 }
 
+export type CorruptionStatus = "ok" | "corrupted" | "warning" | "unknown";
+
+export interface CorruptionCheck {
+  status: CorruptionStatus;
+  // Each entry is a human-readable detail: errors, warnings, or confirmation messages
+  details: string[];
+}
+
 export interface ForensicResult {
   status: ProcessingStatus;
   file?: File;
@@ -134,6 +142,7 @@ export interface ForensicResult {
   zipEntries?: ZipEntry[];
   strings?: string[];
   imageAnalysis?: ImageAnalysis;
+  corruption?: CorruptionCheck;
   privacyScore?: number;
   flags?: ForensicFlag[];
   error?: string;
