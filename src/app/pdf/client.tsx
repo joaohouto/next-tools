@@ -7,7 +7,7 @@ import {
   useRef,
   type DragEvent,
 } from "react";
-import { PDFDocument, type PDFImage } from "pdf-lib";
+import { PDFDocument, degrees, type PDFImage } from "pdf-lib";
 import {
   FileText,
   Scissors,
@@ -19,6 +19,8 @@ import {
   ArrowLeft,
   Loader2,
   Check,
+  RotateCcw,
+  RotateCw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -28,7 +30,7 @@ import { cn } from "@/lib/utils";
 
 // ─── types ────────────────────────────────────────────────────────────────────
 
-type Mode = "idle" | "choosing" | "merge" | "split" | "to-image";
+type Mode = "idle" | "choosing" | "merge" | "split" | "to-image" | "rotate";
 
 interface MergeItem {
   id: string;
@@ -148,7 +150,7 @@ function DropZone({
         {label ?? "Arraste PDFs ou imagens aqui"}
       </p>
       {!compact && (
-        <p className="text-xs text-muted-foreground/60">Mesclar · Dividir · Converter para imagem</p>
+        <p className="text-xs text-muted-foreground/60">Mesclar · Dividir · Rotar · Converter para imagem</p>
       )}
       <input ref={ref} type="file" accept={ACCEPTED} multiple className="hidden"
         onChange={(e) => handle(e.target.files)} />
@@ -618,6 +620,246 @@ function ToImageView({ file, onBack }: { file: File; onBack: () => void }) {
   );
 }
 
+// ─── rotate view ──────────────────────────────────────────────────────────────
+
+interface PageRot {
+  number: number;
+  thumb: string | null;
+  existingDeg: number;
+  delta: number;
+}
+
+function RotateView({ file, pageCount, onBack }: { file: File; pageCount: number; onBack: () => void }) {
+  const [pages, setPages] = useState<PageRot[]>([]);
+  const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    (async () => {
+      try {
+        const bytes = await file.arrayBuffer();
+        const doc = await PDFDocument.load(bytes);
+        const existingRots = doc.getPages().map((p) => p.getRotation().angle);
+
+        setPages(
+          Array.from({ length: pageCount }, (_, i) => ({
+            number: i + 1,
+            thumb: null,
+            existingDeg: existingRots[i] ?? 0,
+            delta: 0,
+          })),
+        );
+
+        const pdfjs = await getPdfjs();
+        const pdfjsDoc = await pdfjs.getDocument({ data: new Uint8Array(bytes) }).promise;
+        for (let n = 1; n <= pageCount; n++) {
+          if (controller.signal.aborted) break;
+          const page = await pdfjsDoc.getPage(n);
+          const vp = page.getViewport({ scale: 0.4 });
+          const canvas = document.createElement("canvas");
+          canvas.width = vp.width;
+          canvas.height = vp.height;
+          await page.render({ canvasContext: canvas.getContext("2d")!, viewport: vp }).promise;
+          const dataUrl = canvas.toDataURL("image/jpeg", 0.75);
+          setPages((prev) => prev.map((p) => (p.number === n ? { ...p, thumb: dataUrl } : p)));
+        }
+      } catch { /* silent */ }
+    })();
+    return () => controller.abort();
+  }, [file, pageCount]);
+
+  const applyDelta = (nums: number[], deg: number) =>
+    setPages((prev) =>
+      prev.map((p) =>
+        nums.includes(p.number)
+          ? { ...p, delta: ((p.delta + deg) % 360 + 360) % 360 }
+          : p,
+      ),
+    );
+
+  const resetPages = (nums: number[]) =>
+    setPages((prev) => prev.map((p) => (nums.includes(p.number) ? { ...p, delta: 0 } : p)));
+
+  const toggle = (n: number) =>
+    setSelected((prev) => {
+      const next = new Set(prev);
+      next.has(n) ? next.delete(n) : next.add(n);
+      return next;
+    });
+
+  const allNums = pages.map((p) => p.number);
+  const hasChanges = pages.some((p) => p.delta !== 0);
+
+  const save = async () => {
+    setSaving(true);
+    try {
+      const src = await PDFDocument.load(await file.arrayBuffer());
+      const pdfPages = src.getPages();
+      for (const p of pages) {
+        const newDeg = ((p.existingDeg + p.delta) % 360 + 360) % 360;
+        pdfPages[p.number - 1].setRotation(degrees(newDeg));
+      }
+      const url = URL.createObjectURL(new Blob([await src.save()], { type: "application/pdf" }));
+      Object.assign(document.createElement("a"), {
+        href: url,
+        download: file.name.replace(/\.pdf$/i, "") + "-rotated.pdf",
+      }).click();
+      URL.revokeObjectURL(url);
+      toast.success("PDF salvo com rotações aplicadas!");
+    } catch (err) {
+      console.error(err);
+      toast.error("Erro ao aplicar rotações.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="flex flex-col gap-4">
+      <button
+        onClick={onBack}
+        className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors w-fit"
+      >
+        <ArrowLeft size={13} /> Voltar
+      </button>
+
+      {/* File info + global rotate buttons */}
+      <div className="p-3 border rounded-lg bg-muted/30 text-sm flex flex-wrap items-center gap-3">
+        <div className="min-w-0 flex-1">
+          <p className="font-medium truncate">{file.name}</p>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            {pageCount} página{pageCount !== 1 ? "s" : ""}
+          </p>
+        </div>
+        <div className="flex gap-2 shrink-0">
+          <Button variant="outline" size="sm" className="h-7 text-xs gap-1" onClick={() => applyDelta(allNums, -90)}>
+            <RotateCcw size={12} /> Todas 90° E
+          </Button>
+          <Button variant="outline" size="sm" className="h-7 text-xs gap-1" onClick={() => applyDelta(allNums, 90)}>
+            <RotateCw size={12} /> Todas 90° D
+          </Button>
+        </div>
+      </div>
+
+      {/* Selection toolbar */}
+      {selected.size > 0 && (
+        <div className="flex flex-wrap items-center gap-2 p-2.5 border rounded-lg bg-primary/5">
+          <span className="text-xs text-muted-foreground flex-1">
+            {selected.size} página{selected.size !== 1 ? "s" : ""} selecionada{selected.size !== 1 ? "s" : ""}
+          </span>
+          <Button variant="outline" size="sm" className="h-7 text-xs gap-1" onClick={() => applyDelta([...selected], -90)}>
+            <RotateCcw size={12} /> 90° E
+          </Button>
+          <Button variant="outline" size="sm" className="h-7 text-xs gap-1" onClick={() => applyDelta([...selected], 90)}>
+            <RotateCw size={12} /> 90° D
+          </Button>
+          <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => applyDelta([...selected], 180)}>
+            180°
+          </Button>
+          <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => resetPages([...selected])}>
+            Redefinir
+          </Button>
+          <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setSelected(new Set())}>
+            Limpar seleção
+          </Button>
+        </div>
+      )}
+
+      <p className="text-xs text-muted-foreground">
+        Clique nas páginas para selecionar múltiplas · use os botões abaixo de cada miniatura para rotação individual
+      </p>
+
+      {/* Page grid */}
+      <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
+        {pages.map((p) => {
+          const isSelected = selected.has(p.number);
+          const rotated = p.delta % 180 !== 0;
+          return (
+            <div key={p.number} className="flex flex-col items-center gap-1">
+              <button
+                onClick={() => toggle(p.number)}
+                className={cn(
+                  "relative w-full rounded-lg border-2 overflow-hidden transition-all focus:outline-none",
+                  isSelected
+                    ? "border-primary ring-1 ring-primary"
+                    : "border-transparent hover:border-foreground/30",
+                )}
+              >
+                <div className="w-full aspect-square bg-muted flex items-center justify-center overflow-hidden">
+                  {p.thumb ? (
+                    <img
+                      src={p.thumb}
+                      alt={`Página ${p.number}`}
+                      className="object-contain transition-transform duration-200"
+                      style={{
+                        transform: `rotate(${p.delta}deg)`,
+                        maxWidth: rotated ? "70%" : "100%",
+                        maxHeight: rotated ? "70%" : "100%",
+                        width: rotated ? undefined : "100%",
+                        height: rotated ? undefined : "100%",
+                      }}
+                    />
+                  ) : (
+                    <ThumbSkeleton className="w-full h-full" />
+                  )}
+                </div>
+
+                {isSelected && (
+                  <div className="absolute top-1 right-1">
+                    <div className="bg-primary rounded-full p-0.5">
+                      <Check size={10} className="text-primary-foreground" strokeWidth={3} />
+                    </div>
+                  </div>
+                )}
+
+                {p.delta !== 0 && (
+                  <div className="absolute bottom-0 left-0 right-0 bg-primary/80 text-primary-foreground text-[9px] text-center py-0.5 font-medium">
+                    +{p.delta}°
+                  </div>
+                )}
+              </button>
+
+              <span className="text-[10px] text-muted-foreground">{p.number}</span>
+
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => applyDelta([p.number], -90)}
+                  className="p-1 rounded hover:bg-muted transition-colors"
+                  title="Girar 90° para a esquerda"
+                >
+                  <RotateCcw size={12} className="text-muted-foreground" />
+                </button>
+                {p.delta !== 0 && (
+                  <button
+                    onClick={() => resetPages([p.number])}
+                    className="px-1 rounded hover:bg-muted transition-colors text-[9px] text-muted-foreground font-medium"
+                    title="Redefinir rotação"
+                  >
+                    ↺
+                  </button>
+                )}
+                <button
+                  onClick={() => applyDelta([p.number], 90)}
+                  className="p-1 rounded hover:bg-muted transition-colors"
+                  title="Girar 90° para a direita"
+                >
+                  <RotateCw size={12} className="text-muted-foreground" />
+                </button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <Button onClick={save} disabled={saving || !hasChanges}>
+        <Download size={15} />
+        {saving ? "Salvando…" : "Baixar PDF rotacionado"}
+      </Button>
+    </div>
+  );
+}
+
 // ─── main ─────────────────────────────────────────────────────────────────────
 
 export default function PdfTool() {
@@ -702,11 +944,13 @@ export default function PdfTool() {
               </div>
             </div>
             <p className="text-xs text-muted-foreground">O que deseja fazer?</p>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <div className="grid grid-cols-2 gap-3">
               <ActionCard icon={<FileStack size={20} />} title="Mesclar"
                 description="Combine com outros PDFs ou imagens" onClick={goMerge} />
               <ActionCard icon={<Scissors size={20} />} title="Dividir"
                 description="Extraia páginas específicas" onClick={() => setMode("split")} />
+              <ActionCard icon={<RotateCw size={20} />} title="Rotar"
+                description="Gire páginas inteiras ou individuais" onClick={() => setMode("rotate")} />
               <ActionCard icon={<FileImage size={20} />} title="Para imagem"
                 description="Converta cada página em PNG" onClick={() => setMode("to-image")} />
             </div>
@@ -721,6 +965,10 @@ export default function PdfTool() {
 
         {mode === "to-image" && chosenFile && (
           <ToImageView file={chosenFile} onBack={reset} />
+        )}
+
+        {mode === "rotate" && chosenFile && (
+          <RotateView file={chosenFile} pageCount={chosenPageCount} onBack={reset} />
         )}
 
       </div>
