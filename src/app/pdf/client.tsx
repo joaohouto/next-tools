@@ -452,7 +452,7 @@ function SplitView({ file, pageCount, onBack }: { file: File; pageCount: number;
             let dest = item.dest as unknown;
             if (typeof dest === "string") dest = await doc.getDestination(dest);
             if (!Array.isArray(dest) || !dest.length) continue;
-            const pageIndex = await doc.getPageIndex(dest[0] as object);
+            const pageIndex = await doc.getPageIndex(dest[0] as unknown as { num: number; gen: number });
             entries.push({ title: item.title as string, startPage: pageIndex + 1 });
           } catch { /* skip */ }
         }
