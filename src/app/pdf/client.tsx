@@ -1231,6 +1231,7 @@ function CompressView({ file, pageCount, onBack }: { file: File; pageCount: numb
 
       for (let i = 1; i <= pdfjsDoc.numPages; i++) {
         const page = await pdfjsDoc.getPage(i);
+        const naturalVp = page.getViewport({ scale: 1.0 });
         const vp = page.getViewport({ scale: preset.scale });
         const canvas = document.createElement("canvas");
         canvas.width = vp.width;
@@ -1246,8 +1247,8 @@ function CompressView({ file, pageCount, onBack }: { file: File; pageCount: numb
         });
 
         const img = await out.embedJpg(jpegBytes);
-        const pdfPage = out.addPage([img.width, img.height]);
-        pdfPage.drawImage(img, { x: 0, y: 0, width: img.width, height: img.height });
+        const pdfPage = out.addPage([naturalVp.width, naturalVp.height]);
+        pdfPage.drawImage(img, { x: 0, y: 0, width: naturalVp.width, height: naturalVp.height });
         setProgress(i);
       }
 
