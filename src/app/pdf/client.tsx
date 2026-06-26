@@ -362,7 +362,8 @@ function MergeView({ initial, onBack }: { initial: MergeItem[]; onBack: () => vo
 
 // ─── split view ───────────────────────────────────────────────────────────────
 
-type SplitStrategy = "select" | "every-n" | "equal" | "individual" | "bookmarks";
+type SplitStrategy = "select" | "every-n" | "equal" | "individual" | "bookmarks" | "by-size";
+type SizeUnit = "KB" | "MB";
 
 interface BookmarkEntry {
   title: string;
@@ -411,6 +412,9 @@ function SplitView({ file, pageCount, onBack }: { file: File; pageCount: number;
   const [bookmarksLoading, setBookmarksLoading] = useState(false);
   const [results, setResults] = useState<{ label: string; bytes: Uint8Array }[] | null>(null);
   const [splitting, setSplitting] = useState(false);
+  const [targetSize, setTargetSize] = useState(5);
+  const [sizeUnit, setSizeUnit] = useState<SizeUnit>("MB");
+  const [splitProgress, setSplitProgress] = useState<string | null>(null);
 
   // Load thumbnails progressively in background (used by "select" strategy)
   useEffect(() => {
@@ -487,6 +491,7 @@ function SplitView({ file, pageCount, onBack }: { file: File; pageCount: number;
         return { label: bm.title, pages: Array.from({ length: end - bm.startPage + 1 }, (_, j) => bm.startPage + j) };
       });
     }
+    // "by-size" parts are computed dynamically during doSplit, not here
     return [];
   };
 
@@ -496,6 +501,7 @@ function SplitView({ file, pageCount, onBack }: { file: File; pageCount: number;
     if (strategy === "equal")      return Math.max(2, Math.min(numParts, pageCount));
     if (strategy === "individual") return pageCount;
     if (strategy === "bookmarks")  return bookmarks?.length ?? 0;
+    if (strategy === "by-size")    return null; // unknown until split runs
     return 0;
   })();
 
@@ -515,21 +521,67 @@ function SplitView({ file, pageCount, onBack }: { file: File; pageCount: number;
   };
 
   const doSplit = async () => {
-    const parts = getParts();
-    if (!parts.length) { toast.error("Nenhuma parte para dividir."); return; }
     setSplitting(true);
     setResults(null);
+    setSplitProgress(null);
     try {
-      const src = await PDFDocument.load(await file.arrayBuffer());
+      const srcBytes = await file.arrayBuffer();
+      const src = await PDFDocument.load(srcBytes);
       const base = file.name.replace(/\.pdf$/i, "");
       const built: { label: string; bytes: Uint8Array }[] = [];
-      for (const part of parts) {
-        if (!part.pages.length) continue;
-        const out = await PDFDocument.create();
-        const copied = await out.copyPages(src, part.pages.map((p) => p - 1));
-        copied.forEach((p) => out.addPage(p));
-        built.push({ label: part.label, bytes: await out.save() });
+
+      if (strategy === "by-size") {
+        const limitBytes = Math.max(1, targetSize) * (sizeUnit === "MB" ? 1024 * 1024 : 1024);
+
+        // Measure each page individually to estimate its contribution to file size
+        setSplitProgress(`Analisando ${pageCount} páginas…`);
+        const pageSizes: number[] = [];
+        for (let i = 0; i < pageCount; i++) {
+          setSplitProgress(`Analisando página ${i + 1} de ${pageCount}…`);
+          const tmp = await PDFDocument.create();
+          const [copied] = await tmp.copyPages(src, [i]);
+          tmp.addPage(copied);
+          pageSizes.push((await tmp.save()).byteLength);
+        }
+
+        // Greedy bin-packing by estimated page sizes
+        const groups: number[][] = [[]];
+        let accumulated = 0;
+        for (let i = 0; i < pageCount; i++) {
+          if (groups[groups.length - 1].length > 0 && accumulated + pageSizes[i] > limitBytes) {
+            groups.push([]);
+            accumulated = 0;
+          }
+          groups[groups.length - 1].push(i);
+          accumulated += pageSizes[i];
+        }
+
+        setSplitProgress(`Gerando ${groups.length} arquivo${groups.length !== 1 ? "s" : ""}…`);
+        for (const indices of groups) {
+          if (!indices.length) continue;
+          const out = await PDFDocument.create();
+          const copied = await out.copyPages(src, indices);
+          copied.forEach((p) => out.addPage(p));
+          const bytes = await out.save();
+          const startPage = indices[0] + 1;
+          const endPage = indices[indices.length - 1] + 1;
+          built.push({
+            label: startPage === endPage ? `Página ${startPage}` : `Páginas ${startPage}–${endPage}`,
+            bytes,
+          });
+        }
+      } else {
+        const parts = getParts();
+        if (!parts.length) { toast.error("Nenhuma parte para dividir."); return; }
+        for (const part of parts) {
+          if (!part.pages.length) continue;
+          const out = await PDFDocument.create();
+          const copied = await out.copyPages(src, part.pages.map((p) => p - 1));
+          copied.forEach((p) => out.addPage(p));
+          built.push({ label: part.label, bytes: await out.save() });
+        }
       }
+
       if (built.length === 1) {
         triggerDownload(built[0].bytes, `${base}-split.pdf`);
         toast.success("PDF exportado!");
@@ -541,6 +593,7 @@ function SplitView({ file, pageCount, onBack }: { file: File; pageCount: number;
       toast.error("Erro ao dividir o PDF.");
     } finally {
       setSplitting(false);
+      setSplitProgress(null);
     }
   };
 
@@ -550,12 +603,14 @@ function SplitView({ file, pageCount, onBack }: { file: File; pageCount: number;
     { id: "equal",      label: "Partes iguais" },
     { id: "individual", label: "Individualmente" },
     { id: "bookmarks",  label: "Por marcadores" },
+    { id: "by-size",    label: "Por tamanho" },
   ];
 
   const isDisabled =
     splitting ||
     (strategy === "select" && selected.size === 0) ||
-    (strategy === "bookmarks" && (!bookmarks || !bookmarks.length));
+    (strategy === "bookmarks" && (!bookmarks || !bookmarks.length)) ||
+    (strategy === "by-size" && (targetSize <= 0 || isNaN(targetSize)));
 
   return (
     <div className="flex flex-col gap-4">
@@ -704,6 +759,43 @@ function SplitView({ file, pageCount, onBack }: { file: File; pageCount: number;
         </div>
       )}
 
+      {/* by-size */}
+      {strategy === "by-size" && (
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-2">
+            <Label>Tamanho máximo por arquivo</Label>
+            <div className="flex gap-2">
+              <Input
+                type="number" min={1} step={1}
+                value={targetSize}
+                onChange={(e) => { setTargetSize(Math.max(1, parseFloat(e.target.value) || 1)); setResults(null); }}
+                className="flex-1"
+              />
+              <div className="flex border rounded-lg overflow-hidden text-xs">
+                {(["KB", "MB"] as SizeUnit[]).map((u) => (
+                  <button key={u} onClick={() => { setSizeUnit(u); setResults(null); }}
+                    className={cn(
+                      "px-3 py-1.5 font-medium transition-colors",
+                      sizeUnit === u ? "bg-primary text-primary-foreground" : "hover:bg-muted",
+                    )}>
+                    {u}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            As páginas serão agrupadas até atingir o limite. O número de partes é calculado automaticamente.
+            Tamanhos são estimativas baseadas em páginas individuais.
+          </p>
+          {splitting && splitProgress && (
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Loader2 size={12} className="animate-spin" /> {splitProgress}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Results list */}
       {results && (
         <div className="flex flex-col gap-2">
@@ -736,9 +828,11 @@ function SplitView({ file, pageCount, onBack }: { file: File; pageCount: number;
       <Button onClick={doSplit} disabled={isDisabled}>
         <Scissors size={15} />
         {splitting
-          ? "Dividindo…"
+          ? (splitProgress ?? "Dividindo…")
           : strategy === "select"
             ? selected.size === 0 ? "Selecione páginas" : `Exportar ${selected.size} página${selected.size !== 1 ? "s" : ""}`
+            : strategy === "by-size"
+            ? `Dividir por tamanho (máx. ${targetSize} ${sizeUnit})`
             : previewCount
             ? `Dividir em ${previewCount} parte${previewCount !== 1 ? "s" : ""}`
             : "Dividir"}
