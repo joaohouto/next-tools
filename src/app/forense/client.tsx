@@ -5,7 +5,7 @@ import {
   ShieldAlert, MapPin, FileText, Image,
   Music, Archive, Copy, Download, RefreshCw, AlertTriangle,
   CheckCircle, Info, Fingerprint, Hash, BarChart2,
-  Eye, ScanSearch, ExternalLink, GitCompare, Clock, Zap,
+  Eye, ScanSearch, ExternalLink, GitCompare, Clock, Zap, ShieldOff,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -1021,6 +1021,61 @@ export default function ForenseClient() {
     toast.success("JSON copiado!");
   }, [result]);
 
+  const anonymize = useCallback(async () => {
+    if (!result.file) return;
+    const file = result.file;
+    try {
+      if (isImage(file)) {
+        const blob = await new Promise<Blob>((resolve, reject) => {
+          const url = URL.createObjectURL(file);
+          const img = new window.Image();
+          img.onload = () => {
+            const canvas = document.createElement("canvas");
+            canvas.width = img.naturalWidth;
+            canvas.height = img.naturalHeight;
+            const ctx = canvas.getContext("2d")!;
+            if (isJpeg(file)) { ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, canvas.width, canvas.height); }
+            ctx.drawImage(img, 0, 0);
+            URL.revokeObjectURL(url);
+            const mime = isJpeg(file) ? "image/jpeg" : "image/png";
+            canvas.toBlob((b) => b ? resolve(b) : reject(new Error("blob")), mime, 0.95);
+          };
+          img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("load")); };
+          img.src = url;
+        });
+        const ext = isJpeg(file) ? "jpg" : "png";
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = file.name.replace(/\.[^.]+$/, "") + `-anon.${ext}`;
+        a.click();
+        URL.revokeObjectURL(a.href);
+        toast.success("Imagem anonimizada — metadados removidos!");
+      } else if (isPdf(file)) {
+        const { PDFDocument } = await import("pdf-lib");
+        const bytes = await file.arrayBuffer();
+        const doc = await PDFDocument.load(bytes, { ignoreEncryption: true });
+        doc.setTitle("");
+        doc.setAuthor("");
+        doc.setSubject("");
+        doc.setKeywords([]);
+        doc.setProducer("");
+        doc.setCreator("");
+        doc.setCreationDate(new Date(0));
+        doc.setModificationDate(new Date(0));
+        const clean = await doc.save({ useObjectStreams: true });
+        const blob = new Blob([clean], { type: "application/pdf" });
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = file.name.replace(/\.pdf$/i, "") + "-anon.pdf";
+        a.click();
+        URL.revokeObjectURL(a.href);
+        toast.success("PDF anonimizado — metadados removidos!");
+      }
+    } catch {
+      toast.error("Erro ao anonimizar o arquivo.");
+    }
+  }, [result.file]);
+
   const hasGps = !!result.exif?.gps;
   const timeline = buildTimeline(result);
   const hasTimeline = timeline.length >= 2;
@@ -1072,6 +1127,11 @@ export default function ForenseClient() {
         <div className="flex gap-2 flex-wrap">
           <Button size="sm" variant="outline" onClick={exportJson} disabled={!result.basic}><Download size={13} className="mr-1.5" />JSON</Button>
           <Button size="sm" variant="outline" onClick={copyJson} disabled={!result.basic}><Copy size={13} className="mr-1.5" />Copiar</Button>
+          {(isImage(file) || isPdf(file)) && (
+            <Button size="sm" variant="outline" onClick={anonymize} disabled={isProcessing}>
+              <ShieldOff size={13} className="mr-1.5" />Anonimizar
+            </Button>
+          )}
           <Button
             size="sm"
             variant={compareMode ? "default" : "outline"}
