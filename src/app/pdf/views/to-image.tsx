@@ -132,11 +132,9 @@ export function ToImageView({ file, onBack }: ToImageViewProps) {
                 <div className="flex items-center justify-between px-3 py-2 bg-muted/30">
                   <span className="text-xs text-muted-foreground">Página {page.number}</span>
                   <div className="flex gap-1">
-                    {format === "png" && (
-                      <Button variant="ghost" size="sm" className="h-7 text-xs gap-1" onClick={() => copyToClipboard(page)}>
-                        <Copy size={12} /> Copiar
-                      </Button>
-                    )}
+                    <Button variant="ghost" size="sm" className="h-7 text-xs gap-1" onClick={() => copyToClipboard(page)}>
+                      <Copy size={12} /> Copiar
+                    </Button>
                     <Button variant="ghost" size="sm" className="h-7 text-xs gap-1" onClick={() => download(page)}>
                       <Download size={12} /> {format.toUpperCase()}
                     </Button>
