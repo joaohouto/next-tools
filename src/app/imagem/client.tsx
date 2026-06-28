@@ -538,12 +538,13 @@ const BG_MODELS: { value: BgModel; label: string; size: string; hint: string }[]
   { value: "isnet",        label: "Preciso",     size: "~36 MB", hint: "Máxima qualidade" },
 ];
 
+type BgPhase = "idle" | "starting" | "downloading" | "inferring";
+
 function RemoveBgView({ file, onBack, onUseResult }: { file: File; onBack: () => void; onUseResult?: (f: File) => void }) {
   const [previewUrl] = useState(() => URL.createObjectURL(file));
   const [result, setResult] = useState<string | null>(null);
-  const [processing, setProcessing] = useState(false);
+  const [phase, setPhase] = useState<BgPhase>("idle");
   const [progress, setProgress] = useState(0);
-  const [progressLabel, setProgressLabel] = useState("Carregando modelo…");
   const containerRef = useRef<HTMLDivElement>(null);
   const [zoom, setZoom] = useState({ x: 0, y: 0, show: false });
   const resultUrlRef = useRef<string | null>(null);
@@ -559,7 +560,8 @@ function RemoveBgView({ file, onBack, onUseResult }: { file: File; onBack: () =>
 
   const doRemoveBg = async (m: BgModel) => {
     const id = ++runRef.current;
-    setProcessing(true); setProgress(0); setProgressLabel("Carregando modelo…");
+    setPhase("starting");
+    setProgress(0);
     const seen = new Map<string, [number, number]>();
     try {
       const { removeBackground } = await import("@imgly/background-removal");
@@ -573,12 +575,11 @@ function RemoveBgView({ file, onBack, onUseResult }: { file: File; onBack: () =>
           if (t > 0) {
             const pct = Math.round((c / t) * 100);
             setProgress(pct);
-            setProgressLabel(pct < 100 ? "Baixando modelo…" : "Processando imagem…");
+            setPhase(pct < 100 ? "downloading" : "inferring");
           }
         },
       });
       if (runRef.current !== id) return;
-      setProgress(100);
       if (resultUrlRef.current) URL.revokeObjectURL(resultUrlRef.current);
       resultUrlRef.current = URL.createObjectURL(blob);
       setResult(resultUrlRef.current);
@@ -587,16 +588,8 @@ function RemoveBgView({ file, onBack, onUseResult }: { file: File; onBack: () =>
       console.error(err);
       toast.error("Erro ao remover fundo.");
     } finally {
-      if (runRef.current === id) {
-        setProcessing(false);
-        setTimeout(() => setProgress(0), 1000);
-      }
+      if (runRef.current === id) setPhase("idle");
     }
-  };
-
-  const handleModelChange = (m: BgModel) => {
-    setModel(m);
-    doRemoveBg(m);
   };
 
   const download = () => { if (!result) return; Object.assign(document.createElement("a"), { href: result, download: `${file.name.replace(/\.[^.]+$/, "")}-sem-fundo.png` }).click(); };
@@ -606,49 +599,67 @@ function RemoveBgView({ file, onBack, onUseResult }: { file: File; onBack: () =>
     catch { toast.error("Erro ao copiar."); }
   };
 
+  const processing = phase !== "idle";
+
+  const phaseLabel: Record<BgPhase, string> = {
+    idle: "",
+    starting: "Preparando modelo…",
+    downloading: `Baixando modelo… ${progress}%`,
+    inferring: "Processando imagem…",
+  };
+
   return (
     <div className="flex flex-col gap-6">
       <BackBtn onClick={onBack} />
       <ControlsBar>
-        {processing ? (
-          <div className="flex flex-col gap-2">
-            <div className="flex items-center justify-between text-sm">
-              <span className="flex items-center gap-2 text-muted-foreground">
-                {progress > 0
-                  ? <><Sparkles size={16} className="animate-pulse text-blue-500" /> {progressLabel}</>
-                  : <><Loader2 size={16} className="animate-spin text-blue-500" /> {progressLabel}</>
-                }
-              </span>
-              {progress > 0 && <span className="font-mono font-medium">{progress}%</span>}
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-1.5">
+            <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Modelo de IA</Label>
+            <div className="flex gap-2">
+              {BG_MODELS.map((m) => (
+                <button key={m.value} onClick={() => !processing && setModel(m.value)}
+                  disabled={processing}
+                  className={cn(
+                    "flex-1 flex flex-col items-center gap-0.5 py-2 px-1 rounded-lg border text-center transition-all",
+                    model === m.value
+                      ? "bg-primary text-primary-foreground border-primary"
+                      : "hover:border-foreground/40 text-muted-foreground",
+                    processing && "opacity-60 cursor-not-allowed",
+                  )}>
+                  <span className="text-xs font-medium leading-tight">{m.label}</span>
+                  <span className={cn("text-[10px] leading-tight", model === m.value ? "text-primary-foreground/70" : "text-muted-foreground/60")}>{m.size}</span>
+                </button>
+              ))}
             </div>
-            {progress > 0 && <Progress value={progress} className="h-1.5" />}
+            <p className="text-[11px] text-muted-foreground/60">
+              {BG_MODELS.find((m) => m.value === model)?.hint} · Salvo em cache pelo navegador após o primeiro download
+            </p>
           </div>
-        ) : (
-          <div className="flex flex-col gap-3">
-            <div className="flex flex-col gap-1.5">
-              <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Modelo de IA</Label>
-              <div className="flex gap-2">
-                {BG_MODELS.map((m) => (
-                  <button key={m.value} onClick={() => handleModelChange(m.value)}
-                    className={cn(
-                      "flex-1 flex flex-col items-center gap-0.5 py-2 px-1 rounded-lg border text-center transition-all",
-                      model === m.value
-                        ? "bg-primary text-primary-foreground border-primary"
-                        : "hover:border-foreground/40 text-muted-foreground",
-                    )}>
-                    <span className="text-xs font-medium leading-tight">{m.label}</span>
-                    <span className={cn("text-[10px] leading-tight", model === m.value ? "text-primary-foreground/70" : "text-muted-foreground/60")}>{m.size}</span>
-                  </button>
-                ))}
+
+          {processing ? (
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center justify-between text-sm">
+                <span className="flex items-center gap-2 text-muted-foreground">
+                  {phase === "starting"
+                    ? <Loader2 size={15} className="animate-spin text-blue-500" />
+                    : <Sparkles size={15} className="animate-pulse text-blue-500" />}
+                  {phaseLabel[phase]}
+                </span>
+                {phase === "downloading" && <span className="font-mono text-xs font-medium">{progress}%</span>}
               </div>
-              <p className="text-[11px] text-muted-foreground/60">
-                {BG_MODELS.find((m) => m.value === model)?.hint} · Baixado uma vez e salvo em cache pelo navegador
-              </p>
+              {phase === "starting" && (
+                <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+                  <div className="h-full bg-primary/40 animate-pulse rounded-full w-full" />
+                </div>
+              )}
+              {phase === "downloading" && <Progress value={progress} className="h-1.5" />}
+              {phase === "inferring" && <Progress value={100} className="h-1.5" />}
             </div>
+          ) : (
             <div className="flex gap-2 flex-wrap">
               {result
-                ? <Button variant="outline" size="sm" onClick={() => doRemoveBg(model)} disabled={processing}><RefreshCw size={14} /> Refazer</Button>
-                : <Button size="sm" onClick={() => doRemoveBg(model)} disabled={processing}><Sparkles size={14} /> Remover Fundo</Button>
+                ? <Button variant="outline" size="sm" onClick={() => doRemoveBg(model)}><RefreshCw size={14} /> Refazer</Button>
+                : <Button size="sm" onClick={() => doRemoveBg(model)}><Sparkles size={14} /> Remover Fundo</Button>
               }
               <div className="flex-1" />
               <Button variant="outline" size="sm" onClick={copy} disabled={!result}><Copy size={14} /> Copiar</Button>
@@ -659,8 +670,8 @@ function RemoveBgView({ file, onBack, onUseResult }: { file: File; onBack: () =>
                 </Button>
               )}
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </ControlsBar>
       <div className="grid md:grid-cols-2 gap-4">
         <div className="flex flex-col gap-2">
