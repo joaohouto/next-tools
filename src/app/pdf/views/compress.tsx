@@ -11,16 +11,18 @@ import { type CompressQuality, type ViewProps } from "../types";
 import { getPdfjs, fmt, makePdfFile, triggerBytesDownload } from "../utils";
 
 const COMPRESS_PRESETS: Record<CompressQuality, { scale: number; jpeg: number; label: string; desc: string }> = {
-  low:    { scale: 1.0, jpeg: 0.45, label: "Baixa",  desc: "Menor arquivo, qualidade reduzida" },
-  medium: { scale: 1.5, jpeg: 0.70, label: "Média",  desc: "Equilíbrio entre tamanho e qualidade" },
-  high:   { scale: 2.0, jpeg: 0.88, label: "Alta",   desc: "Boa qualidade, redução moderada" },
+  low:    { scale: 0.5,  jpeg: 0.50, label: "Baixa",  desc: "Máxima compressão, qualidade reduzida" },
+  medium: { scale: 0.75, jpeg: 0.72, label: "Média",  desc: "Equilíbrio entre tamanho e qualidade" },
+  high:   { scale: 1.0,  jpeg: 0.85, label: "Alta",   desc: "Boa qualidade, compressão moderada" },
 };
+
+type CompressSource = "original" | "lossless" | "raster";
 
 export function CompressView({ file, pageCount, onBack, onUseResult }: ViewProps) {
   const [quality, setQuality] = useState<CompressQuality>("medium");
   const [compressing, setCompressing] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [result, setResult] = useState<{ bytes: Uint8Array; size: number } | null>(null);
+  const [result, setResult] = useState<{ bytes: Uint8Array; size: number; source: CompressSource } | null>(null);
 
   const compress = async () => {
     setCompressing(true);
@@ -28,9 +30,15 @@ export function CompressView({ file, pageCount, onBack, onUseResult }: ViewProps
     setResult(null);
     try {
       const preset = COMPRESS_PRESETS[quality as CompressQuality];
+      const originalBytes = new Uint8Array(await file.arrayBuffer());
+
+      // Strategy 1: lossless object-stream compression (preserves text and vectors)
+      const losslessDoc = await PDFDocument.load(originalBytes);
+      const losslessBytes = await losslessDoc.save({ useObjectStreams: true });
+
+      // Strategy 2: rasterization with corrected scale (≤1.0, never upsamples)
       const pdfjs = await getPdfjs();
-      const bytes = await file.arrayBuffer();
-      const pdfjsDoc = await pdfjs.getDocument({ data: new Uint8Array(bytes) }).promise;
+      const pdfjsDoc = await pdfjs.getDocument({ data: new Uint8Array(originalBytes) }).promise;
       const out = await PDFDocument.create();
 
       for (let i = 1; i <= pdfjsDoc.numPages; i++) {
@@ -56,8 +64,17 @@ export function CompressView({ file, pageCount, onBack, onUseResult }: ViewProps
         setProgress(i);
       }
 
-      const outBytes = await out.save();
-      setResult({ bytes: outBytes, size: outBytes.byteLength });
+      const rasterBytes = await out.save({ useObjectStreams: true });
+
+      // Pick the smallest result among original, lossless, and rasterized
+      const candidates: { bytes: Uint8Array; source: CompressSource }[] = [
+        { bytes: originalBytes, source: "original" },
+        { bytes: losslessBytes, source: "lossless" },
+        { bytes: rasterBytes, source: "raster" },
+      ];
+      const best = candidates.reduce((a, b) => a.bytes.byteLength <= b.bytes.byteLength ? a : b);
+
+      setResult({ bytes: best.bytes, size: best.bytes.byteLength, source: best.source });
     } catch (err) {
       console.error(err);
       toast.error("Erro ao comprimir o PDF.");
@@ -113,7 +130,7 @@ export function CompressView({ file, pageCount, onBack, onUseResult }: ViewProps
           )}
         </div>
         <p className="text-xs text-muted-foreground">
-          A compressão rasteriza o PDF — ideal para documentos escaneados e PDFs com muitas imagens.
+          Testa compressão sem perdas e com rasterização — retorna automaticamente o menor resultado.
         </p>
       </div>
 
@@ -135,22 +152,22 @@ export function CompressView({ file, pageCount, onBack, onUseResult }: ViewProps
         <div
           className={cn(
             "p-3 border rounded-lg text-sm flex items-center justify-between",
-            reduction !== null && reduction > 0
-              ? "bg-green-500/10 border-green-500/30 dark:border-green-500/20"
-              : "bg-muted/30",
+            result.source === "original"
+              ? "bg-muted/30"
+              : "bg-green-500/10 border-green-500/30 dark:border-green-500/20",
           )}
         >
           <div>
             <p className="font-medium">{fmt(result.size)}</p>
             <p className="text-xs text-muted-foreground mt-0.5">
-              {reduction !== null && reduction > 0
-                ? `${reduction}% menor que o original`
-                : reduction !== null && reduction < 0
-                ? `${Math.abs(reduction)}% maior que o original`
+              {result.source === "original"
+                ? "Este PDF já está no tamanho mínimo"
+                : reduction !== null && reduction > 0
+                ? `${reduction}% menor que o original${result.source === "lossless" ? " · sem perda de qualidade" : ""}`
                 : "Mesmo tamanho do original"}
             </p>
           </div>
-          {reduction !== null && reduction > 0 && (
+          {result.source !== "original" && reduction !== null && reduction > 0 && (
             <span className="text-green-600 dark:text-green-400 font-bold text-lg">−{reduction}%</span>
           )}
         </div>
@@ -165,7 +182,7 @@ export function CompressView({ file, pageCount, onBack, onUseResult }: ViewProps
         <>
           <Button variant="outline" onClick={download}>
             <Download size={15} />
-            Baixar PDF comprimido
+            {result.source === "original" ? "Baixar PDF original" : "Baixar PDF comprimido"}
           </Button>
           <Button variant="ghost" onClick={() =>
             onUseResult(

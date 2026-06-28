@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect, useRef } from "react";
-import { Download, ArrowLeft, Loader2 } from "lucide-react";
+import { Download, ArrowLeft, Loader2, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
@@ -52,6 +52,16 @@ export function ToImageView({ file, onBack }: ToImageViewProps) {
   useEffect(() => { render(fileRef.current, scale); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const changeScale = (v: number[]) => { setScale(v[0]); render(fileRef.current, v[0]); };
+
+  const copyToClipboard = async (page: RenderedPage) => {
+    try {
+      const blob = await (await fetch(page.dataUrl)).blob();
+      await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
+      toast.success(`Página ${page.number} copiada!`);
+    } catch {
+      toast.error("Não foi possível copiar a imagem.");
+    }
+  };
 
   const download = (page: RenderedPage) => {
     const name = file.name.replace(/\.pdf$/i, "");
@@ -121,9 +131,14 @@ export function ToImageView({ file, onBack }: ToImageViewProps) {
                 <img src={page.dataUrl} alt={`Página ${page.number}`} className="w-full h-auto" />
                 <div className="flex items-center justify-between px-3 py-2 bg-muted/30">
                   <span className="text-xs text-muted-foreground">Página {page.number}</span>
-                  <Button variant="ghost" size="sm" className="h-7 text-xs gap-1" onClick={() => download(page)}>
-                    <Download size={12} /> {format.toUpperCase()}
-                  </Button>
+                  <div className="flex gap-1">
+                    <Button variant="ghost" size="sm" className="h-7 text-xs gap-1" onClick={() => copyToClipboard(page)}>
+                      <Copy size={12} /> Copiar
+                    </Button>
+                    <Button variant="ghost" size="sm" className="h-7 text-xs gap-1" onClick={() => download(page)}>
+                      <Download size={12} /> {format.toUpperCase()}
+                    </Button>
+                  </div>
                 </div>
               </div>
             ))}
