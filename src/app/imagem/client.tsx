@@ -1067,10 +1067,10 @@ export default function ImageTool() {
         {mode === "idle"         && <ImageDropZone onFiles={handleDrop} />}
         {mode === "choosing"     && <ChoosingView file={files[0]} onSelect={goMode} onBack={reset} />}
         {mode === "compress"     && <CompressView initialFiles={files} onBack={reset} />}
-        {mode === "resize"       && <ResizeView file={files[0]} onBack={reset} onUseResult={useResult} />}
+        {mode === "resize"       && <ResizeView file={files[0]} onBack={reset} />}
         {mode === "convert"      && <ConvertView initialFiles={files} onBack={reset} />}
-        {mode === "remove-bg"    && <RemoveBgView file={files[0]} onBack={reset} onUseResult={useResult} />}
-        {mode === "remove-color" && <RemoveColorView file={files[0]} onBack={reset} onUseResult={useResult} />}
+        {mode === "remove-bg"    && <RemoveBgView file={files[0]} onBack={reset} />}
+        {mode === "remove-color" && <RemoveColorView file={files[0]} onBack={reset} />}
         {mode === "vectorize"    && <VectorizeView file={files[0]} onBack={reset} />}
         {mode === "palette"      && <PaletteView file={files[0]} onBack={reset} />}
       </div>
