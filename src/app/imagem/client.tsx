@@ -395,12 +395,12 @@ function ResizeView({ file, onBack, onUseResult }: { file: File; onBack: () => v
         <div className="flex gap-2">
           <div className="flex-1" />
           <Button size="sm" onClick={apply} disabled={processing}>Aplicar</Button>
-          <Button size="sm" variant="outline" onClick={download} disabled={!resultUrl}>
+          <Button size="sm" onClick={download} disabled={!resultUrl}>
             <Download size={14} /> Baixar
           </Button>
           {onUseResult && resultUrl && (
-            <Button size="sm" variant="outline" onClick={async () => onUseResult(await urlToFile(resultUrl, file.name.replace(/\.[^.]+$/, "") + `-${width}x${height}.png`))}>
-              <ArrowRight size={14} /> Continuar
+            <Button size="sm" variant="ghost" onClick={async () => onUseResult(await urlToFile(resultUrl, file.name.replace(/\.[^.]+$/, "") + `-${width}x${height}.png`))}>
+              <ArrowRight size={14} /> Usar em outra ferramenta
             </Button>
           )}
         </div>
@@ -663,10 +663,10 @@ function RemoveBgView({ file, onBack, onUseResult }: { file: File; onBack: () =>
               }
               <div className="flex-1" />
               <Button variant="outline" size="sm" onClick={copy} disabled={!result}><Copy size={14} /> Copiar</Button>
-              <Button variant="outline" size="sm" onClick={download} disabled={!result}><Download size={14} /> Baixar</Button>
+              <Button size="sm" onClick={download} disabled={!result}><Download size={14} /> Baixar</Button>
               {onUseResult && result && (
-                <Button size="sm" onClick={async () => onUseResult(await urlToFile(result, file.name.replace(/\.[^.]+$/, "") + "-sem-fundo.png"))}>
-                  <ArrowRight size={14} /> Continuar
+                <Button size="sm" variant="ghost" onClick={async () => onUseResult(await urlToFile(result, file.name.replace(/\.[^.]+$/, "") + "-sem-fundo.png"))}>
+                  <ArrowRight size={14} /> Usar em outra ferramenta
                 </Button>
               )}
             </div>
@@ -782,10 +782,10 @@ function RemoveColorView({ file, onBack, onUseResult }: { file: File; onBack: ()
           <div className="flex gap-2 sm:items-end flex-wrap">
             <div className="flex-1" />
             <Button variant="outline" size="sm" onClick={copy} disabled={!result || processing}><Copy size={14} /> Copiar</Button>
-            <Button variant="outline" size="sm" onClick={download} disabled={!result || processing}><Download size={14} /> Baixar</Button>
+            <Button size="sm" onClick={download} disabled={!result || processing}><Download size={14} /> Baixar</Button>
             {onUseResult && result && (
-              <Button size="sm" onClick={async () => onUseResult(await urlToFile(result, file.name.replace(/\.[^.]+$/, "") + "-sem-cor.png"))} disabled={processing}>
-                <ArrowRight size={14} /> Continuar
+              <Button size="sm" variant="ghost" onClick={async () => onUseResult(await urlToFile(result, file.name.replace(/\.[^.]+$/, "") + "-sem-cor.png"))} disabled={processing}>
+                <ArrowRight size={14} /> Usar em outra ferramenta
               </Button>
             )}
           </div>
