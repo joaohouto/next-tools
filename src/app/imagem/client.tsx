@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback, type DragEvent } from "react";
 import {
-  ArrowLeft, ArrowRight, Download, Trash2, Copy, Link, Unlink, Pipette, Check,
+  ArrowLeft, Download, Trash2, Copy, Link, Unlink, Pipette, Check,
   Sparkles, Loader2, RefreshCw, Info, ImageIcon, Images,
   ImageDown, Scaling, Repeat2, BookImage, Eraser, PenTool, Palette as PaletteIcon,
   Plus, X,
@@ -69,12 +69,6 @@ function fileToDataUrl(file: File): Promise<string> {
     reader.onerror = reject;
     reader.readAsDataURL(file);
   });
-}
-
-async function urlToFile(url: string, name: string): Promise<File> {
-  const resp = await fetch(url);
-  const blob = await resp.blob();
-  return new File([blob], name, { type: blob.type || "image/png" });
 }
 
 // ─── image drop zone ──────────────────────────────────────────────────────────
@@ -334,7 +328,7 @@ function CompressView({ initialFiles, onBack }: { initialFiles: File[]; onBack: 
 
 // ─── RESIZE VIEW ─────────────────────────────────────────────────────────────
 
-function ResizeView({ file, onBack, onUseResult }: { file: File; onBack: () => void; onUseResult?: (f: File) => void }) {
+function ResizeView({ file, onBack }: { file: File; onBack: () => void }) {
   const [img, setImg] = useState<HTMLImageElement | null>(null);
   const [width, setWidth] = useState(0);
   const [height, setHeight] = useState(0);
@@ -398,11 +392,6 @@ function ResizeView({ file, onBack, onUseResult }: { file: File; onBack: () => v
           <Button size="sm" onClick={download} disabled={!resultUrl}>
             <Download size={14} /> Baixar
           </Button>
-          {onUseResult && resultUrl && (
-            <Button size="sm" variant="ghost" onClick={async () => onUseResult(await urlToFile(resultUrl, file.name.replace(/\.[^.]+$/, "") + `-${width}x${height}.png`))}>
-              <ArrowRight size={14} /> Usar em outra ferramenta
-            </Button>
-          )}
         </div>
       </ControlsBar>
       {img && (
@@ -540,7 +529,7 @@ const BG_MODELS: { value: BgModel; label: string; size: string; hint: string }[]
 
 type BgPhase = "idle" | "starting" | "downloading" | "inferring";
 
-function RemoveBgView({ file, onBack, onUseResult }: { file: File; onBack: () => void; onUseResult?: (f: File) => void }) {
+function RemoveBgView({ file, onBack }: { file: File; onBack: () => void }) {
   const [previewUrl] = useState(() => URL.createObjectURL(file));
   const [result, setResult] = useState<string | null>(null);
   const [phase, setPhase] = useState<BgPhase>("idle");
@@ -664,11 +653,6 @@ function RemoveBgView({ file, onBack, onUseResult }: { file: File; onBack: () =>
               <div className="flex-1" />
               <Button variant="outline" size="sm" onClick={copy} disabled={!result}><Copy size={14} /> Copiar</Button>
               <Button size="sm" onClick={download} disabled={!result}><Download size={14} /> Baixar</Button>
-              {onUseResult && result && (
-                <Button size="sm" variant="ghost" onClick={async () => onUseResult(await urlToFile(result, file.name.replace(/\.[^.]+$/, "") + "-sem-fundo.png"))}>
-                  <ArrowRight size={14} /> Usar em outra ferramenta
-                </Button>
-              )}
             </div>
           )}
         </div>
@@ -705,7 +689,7 @@ function RemoveBgView({ file, onBack, onUseResult }: { file: File; onBack: () =>
 
 // ─── REMOVE COLOR VIEW ────────────────────────────────────────────────────────
 
-function RemoveColorView({ file, onBack, onUseResult }: { file: File; onBack: () => void; onUseResult?: (f: File) => void }) {
+function RemoveColorView({ file, onBack }: { file: File; onBack: () => void }) {
   const [img, setImg] = useState<HTMLImageElement | null>(null);
   const [result, setResult] = useState<string | null>(null);
   const [color, setColor] = useState("#ffffff");
@@ -783,11 +767,6 @@ function RemoveColorView({ file, onBack, onUseResult }: { file: File; onBack: ()
             <div className="flex-1" />
             <Button variant="outline" size="sm" onClick={copy} disabled={!result || processing}><Copy size={14} /> Copiar</Button>
             <Button size="sm" onClick={download} disabled={!result || processing}><Download size={14} /> Baixar</Button>
-            {onUseResult && result && (
-              <Button size="sm" variant="ghost" onClick={async () => onUseResult(await urlToFile(result, file.name.replace(/\.[^.]+$/, "") + "-sem-cor.png"))} disabled={processing}>
-                <ArrowRight size={14} /> Usar em outra ferramenta
-              </Button>
-            )}
           </div>
         </div>
         <div className="flex flex-col gap-1.5">
@@ -1081,12 +1060,6 @@ export default function ImageTool() {
   }, []);
 
   const goMode = (m: ImageMode) => setMode(m);
-
-  // Receive a processed result as the new working image and return to tool selection
-  const useResult = useCallback((file: File) => {
-    setFiles([file]);
-    setMode("choosing");
-  }, []);
 
   return (
     <div className={cn("p-8 w-full min-h-screen", mode === "idle" && "flex items-center justify-center")}>
