@@ -1,4 +1,4 @@
-/** @type {import('next').Metadata} */
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
@@ -18,17 +18,35 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-export const metadata = {
+export const metadata: Metadata = {
   metadataBase: new URL("https://tools.joaocouto.com"),
-
   title: {
     default: "tools",
-    template: `%s | tools`,
+    template: "%s | tools",
   },
-  description: "Useful tools.",
+  description:
+    "Ferramentas úteis para o dia a dia — direto no navegador, sem instalação.",
   openGraph: {
-    images: [`/og?title=tools`],
+    title: "tools",
+    description:
+      "Ferramentas úteis para o dia a dia — direto no navegador, sem instalação.",
+    images: ["/api/og?title=tools"],
+    type: "website",
+    siteName: "tools",
   },
+  twitter: {
+    card: "summary_large_image",
+    title: "tools",
+    description:
+      "Ferramentas úteis para o dia a dia — direto no navegador, sem instalação.",
+    images: ["/api/og?title=tools"],
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#000000",
+  width: "device-width",
+  initialScale: 1,
 };
 
 export default function RootLayout({
@@ -37,7 +55,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="pt-Br" suppressHydrationWarning>
+    <html lang="pt-BR" suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased font-mono`}
       >

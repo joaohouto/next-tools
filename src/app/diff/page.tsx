@@ -1,4 +1,5 @@
 import Client from "./client";
+import type { Metadata } from "next";
 import { PAGE_LIST } from "@/config/page-list";
 
 const pageMeta = PAGE_LIST.find((p) => p.path === "/diff")!;

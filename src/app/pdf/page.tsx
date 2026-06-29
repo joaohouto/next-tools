@@ -1,12 +1,22 @@
+import type { Metadata } from "next";
 import { PAGE_LIST } from "@/config/page-list";
 import Client from "./client";
 
 const pageMeta = PAGE_LIST.find((p) => p.path === "/pdf")!;
 
-export const metadata = {
+export const metadata: Metadata = {
   title: pageMeta.title,
+  description: pageMeta.description,
   openGraph: {
-    images: [`/api/og?title=${pageMeta.title}`],
+    title: pageMeta.title,
+    description: pageMeta.description,
+    images: [`/api/og?title=${encodeURIComponent(pageMeta.title)}`],
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: pageMeta.title,
+    description: pageMeta.description,
   },
 };
 
