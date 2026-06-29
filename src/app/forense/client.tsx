@@ -19,6 +19,7 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
 } from "recharts";
 import FileDropzone from "@/components/file-dropzone";
+import { Spinner } from "@/components/spinner";
 import { formatBytes, cn } from "@/lib/utils";
 import type { ForensicResult, ForensicFlag, CorruptionCheck } from "./forensic-types";
 import { computeBasicInfo, extractStrings } from "./forensic-engine";
@@ -543,7 +544,7 @@ function TabMetadata({ result }: { result: ForensicResult }) {
                     disabled={elaLoading}
                   >
                     {elaLoading
-                      ? <><div className="animate-spin rounded-full border-2 border-border border-t-foreground h-3 w-3 mr-1.5" />Computando ELA…</>
+                      ? <><Spinner className="size-3 mr-1.5" />Computando ELA…</>
                       : <><Zap size={12} className="mr-1.5" />Analisar com ELA</>
                     }
                   </Button>
@@ -1083,26 +1084,27 @@ export default function ForenseClient() {
 
   if (result.status === "idle" || result.status === "error") {
     return (
-      <div className="max-w-2xl mx-auto py-8 px-4 space-y-6">
-        <div className="flex items-center gap-3">
-          <ScanSearch size={28} className="text-foreground" />
-          <div>
-            <h1 className="text-xl font-bold">Analisador Forense</h1>
-            <p className="text-sm text-muted-foreground">Metadados, hashes, EXIF, GPS e mais — 100% no navegador</p>
-          </div>
+      <div className="min-h-screen flex items-center justify-center p-6">
+        <div className="w-full max-w-md flex flex-col gap-3">
+          {result.status === "error" && (
+            <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">{result.error}</div>
+          )}
+          <FileDropzone
+            onUpload={handleUpload}
+            accept="*/*"
+            icon={<ScanSearch size={22} className="text-muted-foreground" />}
+            title="Analisador Forense"
+            label="Arraste, clique ou cole (Ctrl+V) qualquer arquivo"
+          />
         </div>
-        {result.status === "error" && (
-          <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">{result.error}</div>
-        )}
-        <FileDropzone onUpload={handleUpload} accept="*/*" label="Arraste, clique ou cole qualquer arquivo para analisar" />
       </div>
     );
   }
 
   if (result.status === "processing" && !result.basic) {
     return (
-      <div className="max-w-2xl mx-auto py-16 px-4 flex flex-col items-center gap-3">
-        <div className="animate-spin rounded-full border-4 border-border border-t-foreground h-10 w-10" />
+      <div className="min-h-screen flex flex-col items-center justify-center gap-3">
+        <Spinner />
         <p className="text-muted-foreground text-sm">Processando arquivo…</p>
       </div>
     );
@@ -1121,7 +1123,7 @@ export default function ForenseClient() {
             <p className="font-semibold text-sm truncate">{file.name}</p>
             <p className="text-xs text-muted-foreground">{formatBytes(file.size)} · {file.type || "tipo desconhecido"}</p>
           </div>
-          {isProcessing && <div className="animate-spin rounded-full border-2 border-border border-t-foreground h-4 w-4 shrink-0 ml-1" />}
+          {isProcessing && <Spinner className="size-4 ml-1" />}
           {!isProcessing && result.privacyScore !== undefined && <PrivacyBadge score={result.privacyScore} />}
         </div>
         <div className="flex gap-2 flex-wrap">
@@ -1206,7 +1208,7 @@ export default function ForenseClient() {
               </div>
             ) : compareResult.status === "processing" && !compareResult.basic ? (
               <div className="flex flex-col items-center gap-3 py-12">
-                <div className="animate-spin rounded-full border-4 border-border border-t-foreground h-10 w-10" />
+                <Spinner />
                 <p className="text-muted-foreground text-sm">Processando segundo arquivo…</p>
               </div>
             ) : compareReady ? (

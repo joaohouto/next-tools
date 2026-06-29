@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useCallback, useEffect, useRef } from "react";
-import { Download, ArrowLeft, Loader2, Copy } from "lucide-react";
+import { Download, ArrowLeft, Copy } from "lucide-react";
+import { Spinner } from "@/components/spinner";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
@@ -113,14 +114,14 @@ export function ToImageView({ file, onBack }: ToImageViewProps) {
 
       {rendering && pages.length === 0 && (
         <div className="flex items-center justify-center gap-2 py-8 text-muted-foreground text-sm">
-          <Loader2 size={16} className="animate-spin" /> Convertendo…
+          <Spinner className="size-4" /> Convertendo…
         </div>
       )}
 
       {pages.length > 0 && (
         <>
           <Button onClick={() => pages.forEach(download)} disabled={rendering}>
-            <Download size={15} />
+            {rendering ? <Spinner className="size-3.5" /> : <Download size={15} />}
             {rendering
               ? `Convertendo… (${pages.length})`
               : `Baixar todas (${pages.length} ${format.toUpperCase()})`}

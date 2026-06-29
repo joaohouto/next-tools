@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback, type DragEvent } from "react";
 import { PDFDocument } from "pdf-lib";
 import { GripVertical, Trash2, Download, ArrowLeft, FileText, ArrowRight } from "lucide-react";
+import { Spinner } from "@/components/spinner";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -204,7 +205,7 @@ export function MergeView({ initial, onBack, onUseResult }: MergeViewProps) {
       </div>
 
       <Button onClick={merge} disabled={merging || items.length < 2}>
-        <Download size={15} />
+        {merging ? <Spinner className="size-3.5" /> : <Download size={15} />}
         {merging ? "Mesclando…" : "Baixar PDF mesclado"}
       </Button>
 

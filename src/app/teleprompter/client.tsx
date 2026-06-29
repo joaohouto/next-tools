@@ -11,6 +11,7 @@ import {
   Play,
   Rabbit,
   Turtle,
+  RotateCcw,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
@@ -63,21 +64,28 @@ export default function Teleprompter() {
     setFontSize((prev) => Math.max(12, Math.min(96, prev + delta)));
   }
 
+  function resetScroll() {
+    if (!teleprompterRef.current) return;
+    teleprompterRef.current.scrollTop = isReversed
+      ? teleprompterRef.current.scrollHeight
+      : 0;
+  }
+
   useEffect(() => {
     const handlePaste = (event: ClipboardEvent) => {
       event.preventDefault();
 
-      const text = event.clipboardData?.getData("text/plain"); // Pega apenas texto puro
+      const text = event.clipboardData?.getData("text/plain");
       if (text && teleprompterRef.current) {
         const selection = window.getSelection();
         if (!selection?.rangeCount) return;
 
-        selection.deleteFromDocument(); // Remove qualquer seleção ativa antes de colar
+        selection.deleteFromDocument();
 
         const range = selection.getRangeAt(0);
         range.insertNode(document.createTextNode(text));
 
-        range.collapse(false); // Move o cursor para o final do texto colado
+        range.collapse(false);
       }
     };
 
@@ -98,7 +106,8 @@ export default function Teleprompter() {
       <div
         ref={teleprompterRef}
         contentEditable
-        className="w-full h-full p-8 pb-[200px] box-border leading-[1.5] whitespace-pre-wrap overflow-y-auto outline-none"
+        suppressContentEditableWarning
+        className="w-full h-full p-8 pb-[160px] box-border leading-[1.5] whitespace-pre-wrap overflow-y-auto outline-none"
         style={{
           fontSize: `${fontSize}px`,
           transform: isMirrored ? "scaleX(-1)" : "scaleX(1)",
@@ -107,45 +116,93 @@ export default function Teleprompter() {
         Seu conteúdo aqui...
       </div>
 
-      <nav className="max-w-full  overflow-x-auto flex gap-2 fixed bottom-5 left-1/2 -translate-x-1/2  p-2 rounded opacity-70">
-        <Button size="icon" onClick={togglePlay} title="Play/Pause">
+      <nav className="fixed bottom-5 left-1/2 -translate-x-1/2 flex items-center gap-1 p-2 rounded-2xl backdrop-blur-md bg-background/80 border shadow-lg">
+        <Button
+          size="icon"
+          variant={isPlaying ? "default" : "ghost"}
+          onClick={togglePlay}
+          title="Play/Pause"
+          className="rounded-xl"
+        >
           {isPlaying ? <Pause /> : <Play />}
         </Button>
-        <Button size="icon" onClick={toggleReverse} title="Inverter rolagem">
+
+        <Button
+          size="icon"
+          variant="ghost"
+          onClick={resetScroll}
+          title="Voltar ao início"
+          className="rounded-xl"
+        >
+          <RotateCcw size={16} />
+        </Button>
+
+        <Button
+          size="icon"
+          variant={isReversed ? "secondary" : "ghost"}
+          onClick={toggleReverse}
+          title="Inverter rolagem"
+          className="rounded-xl"
+        >
           {isReversed ? <CircleArrowUp /> : <CircleArrowDown />}
         </Button>
 
-        <Button size="icon" onClick={toggleMirror} title="Inverter">
+        <Button
+          size="icon"
+          variant={isMirrored ? "secondary" : "ghost"}
+          onClick={toggleMirror}
+          title="Espelhar"
+          className="rounded-xl"
+        >
           <FlipHorizontal />
         </Button>
-        <Button
-          size="icon"
-          onClick={() => adjustFontSize(4)}
-          title="Aumentar fonte"
-        >
-          <AArrowUp />
-        </Button>
-        <Button
-          size="icon"
-          onClick={() => adjustFontSize(-4)}
-          title="Diminuir fonte"
-        >
-          <AArrowDown />
-        </Button>
+
+        <div className="w-px h-6 bg-border mx-1" />
 
         <Button
           size="icon"
-          onClick={() => adjustSpeed(0.5)}
-          title="Mais rápido"
+          variant="ghost"
+          onClick={() => adjustFontSize(-4)}
+          title="Diminuir fonte"
+          className="rounded-xl"
         >
-          <Rabbit />
+          <AArrowDown />
         </Button>
+        <span className="text-xs text-muted-foreground font-mono w-10 text-center tabular-nums">
+          {fontSize}px
+        </span>
         <Button
           size="icon"
+          variant="ghost"
+          onClick={() => adjustFontSize(4)}
+          title="Aumentar fonte"
+          className="rounded-xl"
+        >
+          <AArrowUp />
+        </Button>
+
+        <div className="w-px h-6 bg-border mx-1" />
+
+        <Button
+          size="icon"
+          variant="ghost"
           onClick={() => adjustSpeed(-0.5)}
           title="Mais lento"
+          className="rounded-xl"
         >
           <Turtle />
+        </Button>
+        <span className="text-xs text-muted-foreground font-mono w-10 text-center tabular-nums">
+          {scrollSpeed.toFixed(1)}x
+        </span>
+        <Button
+          size="icon"
+          variant="ghost"
+          onClick={() => adjustSpeed(0.5)}
+          title="Mais rápido"
+          className="rounded-xl"
+        >
+          <Rabbit />
         </Button>
       </nav>
     </div>

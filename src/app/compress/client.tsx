@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { Download, Trash2, Plus, Check, X, Loader2 } from "lucide-react";
+import { Download, Trash2, Plus, Check, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import FileDropzone from "@/components/file-dropzone";
+import { Spinner } from "@/components/spinner";
 
 type OutputFormat = "original" | "image/jpeg" | "image/webp" | "image/png";
 type ItemStatus = "idle" | "processing" | "done" | "error";
@@ -156,11 +157,14 @@ export default function ImageCompressor() {
   if (items.length === 0) {
     return (
       <div className="min-h-screen flex items-center justify-center p-6">
-        <div className="w-full max-w-sm flex flex-col gap-4">
-          <p className="text-sm text-muted-foreground text-center">
-            Processado no seu dispositivo, sem enviar para servidores.
-          </p>
-          <FileDropzone onUpload={addFiles} accept="image/*" multiple />
+        <div className="w-full max-w-md">
+          <FileDropzone
+            onUpload={addFiles}
+            accept="image/*"
+            multiple
+            title="Comprimir imagens"
+            label="Arraste, clique ou cole (Ctrl+V) · Processado no dispositivo"
+          />
         </div>
       </div>
     );
@@ -227,7 +231,7 @@ export default function ImageCompressor() {
               </Button>
             )}
             <Button size="sm" onClick={compressAll} disabled={isProcessingAll || pendingCount === 0}>
-              {isProcessingAll && <Loader2 className="size-3.5 animate-spin" />}
+              {isProcessingAll && <Spinner className="size-3.5" />}
               Comprimir {pendingCount > 0 ? `(${pendingCount})` : ""}
             </Button>
           </div>
@@ -278,7 +282,7 @@ export default function ImageCompressor() {
                       <span className="text-xs text-muted-foreground px-2 py-1 rounded-full bg-muted">Aguardando</span>
                     )}
                     {item.status === "processing" && (
-                      <Loader2 className="size-4 text-blue-500 animate-spin" />
+                      <Spinner className="size-4" />
                     )}
                     {item.status === "done" && (
                       <Check className="size-4 text-emerald-500" />

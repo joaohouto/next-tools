@@ -1,18 +1,28 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-import { Card, CardContent } from "@/components/ui/card";
+import { useEffect, useState } from "react";
+import { cn } from "@/lib/utils";
 import { useDeviceOrientation } from "@/lib/use-device-orientation";
 
-interface BubbleLevelDisplayProps {
-  axis: "x" | "y" | "both";
-  description?: string;
+// px per degree of tilt
+const SCALE = 15;
+// circle geometry (px)
+const R = 140;           // outer radius
+const BUBBLE_R = 22;     // bubble radius
+const MAX_OFFSET = R - BUBBLE_R - 8;
+// rings (radius in px → ±degrees = radius / SCALE)
+const RING_INNER = 30;   // ±2°
+const RING_MID   = 75;   // ±5°
+
+function clamp(v: number, lo: number, hi: number) {
+  return Math.min(hi, Math.max(lo, v));
 }
 
-export function BubbleLevelDisplay({
-  axis,
-  description,
-}: BubbleLevelDisplayProps) {
+interface Props {
+  axis?: "x" | "y" | "both";
+}
+
+export function BubbleLevelDisplay({ axis = "both" }: Props) {
   const { orientation, isSupported, isStarted, hasPermission, error } =
     useDeviceOrientation();
 
@@ -20,154 +30,136 @@ export function BubbleLevelDisplay({
   const [y, setY] = useState(0);
 
   useEffect(() => {
-    if (orientation) {
-      // Os valores de beta e gamma vêm diretamente do DeviceOrientationEvent
-      // O beta é a inclinação de frente/trás (pitch)
-      // O gamma é a inclinação de lado/lado (roll)
-      const { beta, gamma } = orientation;
+    if (!orientation) return;
+    const nx = orientation.gamma !== null ? orientation.gamma * -1 : 0;
+    const ny = orientation.beta  !== null ? orientation.beta  * -1 : 0;
+    setX(axis === "y" ? 0 : nx);
+    setY(axis === "x" ? 0 : ny);
+  }, [orientation, axis]);
 
-      // Invertemos os valores para que a bolha se mova intuitivamente
-      // (ex: inclinar para a direita move a bolha para a direita)
-      const newX = gamma !== null ? gamma * -1 : 0;
-      const newY = beta !== null ? beta * -1 : 0;
+  const bx = clamp(x * SCALE, -MAX_OFFSET, MAX_OFFSET);
+  const by = clamp(y * SCALE, -MAX_OFFSET, MAX_OFFSET);
 
-      if (axis === "x") {
-        setX(newX);
-        setY(0); // Trava o Y para nível horizontal
-      } else if (axis === "y") {
-        setX(0); // Trava o X para nível vertical
-        setY(newY);
-      } else {
-        setX(newX);
-        setY(newY);
-      }
-    }
-  }, [orientation, axis]); // Reage a mudanças na orientação ou no eixo
+  const active = isStarted && hasPermission && !!orientation;
+  const isLevel = active && Math.abs(x) <= 1.5 && Math.abs(y) <= 1.5;
 
-  const bubbleTransformX = axis === "y" ? 0 : x / 2;
-  const bubbleTransformY = axis === "x" ? 0 : y / 2;
+  const stateMsg = (() => {
+    if (error?.message.includes("Permission"))
+      return "Permissão negada.\nVerifique as configurações do navegador.";
+    if (!isSupported) return "Giroscópio não suportado neste navegador.";
+    if (!hasPermission) return "Aguardando permissão\npara os sensores de movimento…";
+    if (!isStarted) return "Mova o dispositivo para calibrar…";
+    return null;
+  })();
 
-  const showXGuide = axis === "x" || axis === "both";
-  const showYGuide = axis === "y" || axis === "both";
-
-  const showPermissionDenied = error && error.message.includes("Permission");
-  const showNotSupported = !isSupported && !error;
-  const showAwaitingData = isSupported && !isStarted && hasPermission && !error;
-  const showAwaitingPermission =
-    isSupported && !isStarted && !hasPermission && !error;
+  const diameter = R * 2;
 
   return (
-    <Card className="w-full md:w-[320px] h-[320px] flex flex-col mx-auto shadow-lg rounded-2xl">
-      <CardContent className="relative flex flex-grow items-center justify-center rounded-lg overflow-hidden p-0">
-        {showPermissionDenied && (
-          <p className="text-center text-sm text-balance text-muted-foreground p-4">
-            Permissão para acessar os sensores de movimento negada.
-            <br />
-            (Verifique as configurações do seu navegador/OS para permitir o
-            acesso.)
-          </p>
+    <div className="flex flex-col items-center gap-5">
+
+      {/* Instrument circle */}
+      <div
+        className={cn(
+          "relative rounded-full bg-zinc-900 transition-shadow duration-500",
+          isLevel
+            ? "shadow-[0_0_0_2px_rgba(74,222,128,0.8),0_0_40px_rgba(74,222,128,0.35)]"
+            : "shadow-[0_0_0_1px_rgba(255,255,255,0.08),0_4px_24px_rgba(0,0,0,0.5)]",
         )}
-        {showNotSupported && (
-          <p className="text-center text-sm text-balance text-muted-foreground p-4">
-            A API de Orientação de Dispositivo não é suportada neste navegador.
-          </p>
-        )}
-        {showAwaitingPermission && (
-          <p className="text-center text-xs text-balance text-muted-foreground p-4">
-            Aguardando permissão para acessar os sensores de movimento...
-            <br />
-            (Pode ser necessário interagir com a página para solicitar.)
-          </p>
-        )}
-        {showAwaitingData && (
-          <p className="text-center text-xs text-balance text-muted-foreground p-4">
-            Permissão concedida. Aguardando dados do sensor...
-            <br />
-            (Mova seu dispositivo.)
-          </p>
+        style={{ width: diameter, height: diameter }}
+      >
+        {/* Mid ring */}
+        <div
+          className="absolute rounded-full border border-zinc-700/50"
+          style={{
+            width: RING_MID * 2,
+            height: RING_MID * 2,
+            top: R - RING_MID,
+            left: R - RING_MID,
+          }}
+        />
+
+        {/* Inner target ring */}
+        <div
+          className={cn(
+            "absolute rounded-full border transition-colors duration-300",
+            isLevel ? "border-green-400/70" : "border-zinc-600",
+          )}
+          style={{
+            width: RING_INNER * 2,
+            height: RING_INNER * 2,
+            top: R - RING_INNER,
+            left: R - RING_INNER,
+          }}
+        />
+
+        {/* Crosshairs */}
+        <div className="absolute top-1/2 left-0 right-0 h-px -translate-y-1/2 bg-zinc-700/40" />
+        <div className="absolute left-1/2 top-0 bottom-0 w-px -translate-x-1/2 bg-zinc-700/40" />
+
+        {/* Center dot */}
+        <div
+          className={cn(
+            "absolute rounded-full w-1.5 h-1.5 transition-colors duration-300",
+            isLevel ? "bg-green-400" : "bg-zinc-500",
+          )}
+          style={{ top: R - 3, left: R - 3 }}
+        />
+
+        {/* Bubble */}
+        {active && (
+          <div
+            className={cn(
+              "absolute rounded-full transition-colors duration-300",
+              isLevel
+                ? "bg-green-400 shadow-[0_0_16px_rgba(74,222,128,0.9)]"
+                : "bg-blue-400  shadow-[0_0_10px_rgba(96,165,250,0.7)]",
+            )}
+            style={{
+              width: BUBBLE_R * 2,
+              height: BUBBLE_R * 2,
+              top: R - BUBBLE_R,
+              left: R - BUBBLE_R,
+              transform: `translate(${bx}px,${by}px)`,
+              transition: "transform 50ms linear, background-color 300ms, box-shadow 300ms",
+              opacity: 0.85,
+            }}
+          />
         )}
 
-        {/* Só renderiza o nível se o sensor estiver ativo e tiver permissão */}
-        {isStarted && hasPermission && orientation && (
+        {/* State message */}
+        {stateMsg && (
+          <div className="absolute inset-0 flex items-center justify-center p-8">
+            <p className="text-center text-xs text-zinc-400 whitespace-pre-line text-balance leading-relaxed">
+              {stateMsg}
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Angle readout */}
+      <div className="flex gap-5 font-mono tabular-nums text-sm h-5">
+        {active ? (
           <>
-            {/* Guide Lines - Main Cross */}
-            {showXGuide && (
-              <div className="absolute w-full h-[1px] bg-foreground/50 top-1/2 -translate-y-1/2"></div>
+            {(axis === "x" || axis === "both") && (
+              <span className={cn(
+                "transition-colors duration-200",
+                Math.abs(x) <= 1.5 ? "text-green-400" : "text-zinc-400",
+              )}>
+                {x >= 0 ? "+" : ""}{x.toFixed(1)}°
+              </span>
             )}
-            {showYGuide && (
-              <div className="absolute h-full w-[1px] bg-foreground/50 left-1/2 -translate-x-1/2"></div>
+            {(axis === "y" || axis === "both") && (
+              <span className={cn(
+                "transition-colors duration-200",
+                Math.abs(y) <= 1.5 ? "text-green-400" : "text-zinc-400",
+              )}>
+                {y >= 0 ? "+" : ""}{y.toFixed(1)}°
+              </span>
             )}
-
-            {/* Guide Lines - Quadrants */}
-            {showXGuide && (
-              <>
-                <div className="absolute w-full h-[1px] bg-foreground/30 top-[25%] -translate-y-1/2"></div>
-                <div className="absolute w-full h-[1px] bg-foreground/30 top-[75%] -translate-y-1/2"></div>
-              </>
-            )}
-            {showYGuide && (
-              <>
-                <div className="absolute h-full w-[1px] bg-foreground/30 left-[25%] -translate-x-1/2"></div>
-                <div className="absolute h-full w-[1px] bg-foreground/30 left-[75%] -translate-x-1/2"></div>
-              </>
-            )}
-
-            {/* Central Circle */}
-            <div className="absolute w-48 h-48 border-[1px] border-foreground/50 rounded-full flex items-center justify-center">
-              {/* Inner Circles/Guides for finer precision */}
-              {axis === "both" && (
-                <>
-                  <div className="absolute size-12 border-[1px] border-foreground/40 rounded-full"></div>
-                </>
-              )}
-              {axis !== "both" && (
-                <>
-                  {/* Shorter lines inside the circle for non-both modes */}
-                  {showXGuide && (
-                    <>
-                      <div className="absolute size-12 border-[1px] border-foreground/40 rounded-full"></div>
-                      <div className="absolute w-48  h-12 border-[1px] border-foreground/40 rounded-full"></div>
-
-                      <div className="absolute w-24 h-[1px] bg-foreground/40 top-1/2 -translate-y-1/2"></div>
-                      <div className="absolute w-[1px] h-24 bg-foreground/40 left-1/2 -translate-x-1/2"></div>
-                    </>
-                  )}
-                  {showYGuide && (
-                    <>
-                      <div className="absolute size-12 border-[1px] border-foreground/40 rounded-full"></div>
-                      <div className="absolute w-12  h-48 border-[1px] border-foreground/40 rounded-full"></div>
-
-                      <div className="absolute w-24 h-[1px] bg-foreground/40 top-1/2 -translate-y-1/2 rotate-90"></div>
-                      <div className="absolute w-[1px] h-24 bg-foreground/40 left-1/2 -translate-x-1/2 rotate-90"></div>
-                    </>
-                  )}
-                </>
-              )}
-
-              {/* Central dot */}
-              <div className="w-1.5 h-1.5 bg-foreground rounded-full z-10"></div>
-
-              {/* Bubble */}
-              <div
-                className="absolute w-12 h-12 bg-blue-500 rounded-full opacity-75 shadow-md transition-transform duration-75 ease-out"
-                style={{
-                  transform: `translate(${bubbleTransformX}px, ${bubbleTransformY}px)`,
-                  left: "calc(50% - 24px)",
-                  top: "calc(50% - 24px)",
-                }}
-              ></div>
-            </div>
-            <div className="absolute bottom-2 text-xs text-foreground px-2 text-center">
-              {description && (
-                <p className="text-muted-foreground">{description}</p>
-              )}
-              <p>
-                X: {x.toFixed(1)}° Y: {y.toFixed(1)}°
-              </p>
-            </div>
           </>
-        )}
-      </CardContent>
-    </Card>
+        ) : null}
+      </div>
+
+    </div>
   );
 }

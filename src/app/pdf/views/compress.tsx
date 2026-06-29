@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Download, ArrowLeft, ArrowRight, Loader2, Minimize2 } from "lucide-react";
+import { Download, ArrowLeft, ArrowRight, Minimize2 } from "lucide-react";
+import { Spinner } from "@/components/spinner";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -174,7 +175,7 @@ export function CompressView({ file, pageCount, onBack, onUseResult }: ViewProps
       )}
 
       <Button onClick={compress} disabled={compressing}>
-        {compressing ? <Loader2 size={15} className="animate-spin" /> : <Minimize2 size={15} />}
+        {compressing ? <Spinner className="size-3.5" /> : <Minimize2 size={15} />}
         {compressing ? "Comprimindo…" : "Comprimir"}
       </Button>
 

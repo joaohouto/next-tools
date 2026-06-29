@@ -9,16 +9,20 @@ export default function FileDropzone({
   onUpload,
   accept,
   label,
+  title,
   multiple,
   isLoading = false,
   className,
+  icon,
 }: {
   onUpload: (files: File[]) => void;
   accept?: string;
   label?: string;
+  title?: string;
   multiple?: boolean;
   isLoading?: boolean;
   className?: string;
+  icon?: React.ReactNode;
 }) {
   const [highlight, setHighlight] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -26,95 +30,74 @@ export default function FileDropzone({
   const processFiles = (fileList: FileList | null | undefined) => {
     if (!fileList) return;
     const files = Array.from(fileList);
-    if (files.length > 0) {
-      onUpload(files);
-    }
+    if (files.length > 0) onUpload(files);
+  };
+
+  const acceptsFile = (file: File) => {
+    if (!accept || accept === "*/*" || accept === "*") return true;
+    return accept.split(",").map((t) => t.trim()).some((type) => {
+      if (type === "*/*" || type === "*") return true;
+      if (type.startsWith(".")) return file.name.endsWith(type);
+      if (type.endsWith("/*")) return file.type.startsWith(type.slice(0, -1));
+      return file.type === type;
+    });
   };
 
   useEffect(() => {
     const handlePaste = (e: ClipboardEvent) => {
       const items = e.clipboardData?.items;
-      if (items) {
-        const files: File[] = [];
-        for (let item of items) {
-          if (item.kind === "file") {
-            const file = item.getAsFile();
-            if (file) {
-              if (accept) {
-                const acceptedTypes = accept.split(",").map((t) => t.trim());
-                if (
-                  acceptedTypes.some((type) => {
-                    if (type.startsWith(".")) {
-                      return file.name.endsWith(type);
-                    }
-                    if (type.endsWith("/*")) {
-                      return file.type.startsWith(type.slice(0, -1));
-                    }
-                    return file.type === type;
-                  })
-                ) {
-                  files.push(file);
-                }
-              } else {
-                files.push(file);
-              }
-            }
-          }
-        }
-        if (files.length > 0) {
-          onUpload(files);
+      if (!items) return;
+      const files: File[] = [];
+      for (const item of Array.from(items)) {
+        if (item.kind === "file") {
+          const file = item.getAsFile();
+          if (file && acceptsFile(file)) files.push(file);
         }
       }
+      if (files.length > 0) onUpload(files);
     };
-
     window.addEventListener("paste", handlePaste);
     return () => window.removeEventListener("paste", handlePaste);
-  }, [onUpload, accept]);
-
-  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    setHighlight(false);
-    processFiles(e.dataTransfer.files);
-  };
-
-  const handleClick = () => {
-    inputRef.current?.click();
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    processFiles(e.target.files);
-  };
+  }, [onUpload, accept]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div
-      onDragOver={(e) => {
-        e.preventDefault();
-        setHighlight(true);
-      }}
+      onDragOver={(e) => { e.preventDefault(); setHighlight(true); }}
       onDragLeave={() => setHighlight(false)}
-      onDrop={handleDrop}
-      onClick={handleClick}
+      onDrop={(e) => { e.preventDefault(); setHighlight(false); processFiles(e.dataTransfer.files); }}
+      onClick={() => !isLoading && inputRef.current?.click()}
       className={cn(
-        `w-full h-48 flex flex-col items-center justify-center p-4 border-2 border-dashed rounded-xl cursor-pointer transition-all ${
-          highlight ? "border-blue-400 bg-blue-400/20" : "border-foreground/20"
-        }`,
+        "w-full flex flex-col items-center justify-center gap-3 py-10 px-6 border-2 rounded-2xl cursor-pointer transition-all select-none",
+        highlight
+          ? "border-primary bg-primary/5"
+          : "border-dashed border-foreground/20 hover:border-foreground/40 bg-muted/30",
+        isLoading && "pointer-events-none",
         className,
       )}
     >
-      {isLoading ? (
-        <Spinner />
+      <div className="size-12 rounded-2xl bg-muted flex items-center justify-center">
+        {isLoading
+          ? <Spinner className="size-5" />
+          : (icon ?? <UploadIcon size={22} className="text-muted-foreground" />)
+        }
+      </div>
+      {title ? (
+        <div className="text-center">
+          <p className="text-sm font-medium">{title}</p>
+          <p className={cn("text-xs text-muted-foreground mt-0.5 text-balance transition-opacity", isLoading && "opacity-50")}>
+            {label ?? "Arraste, clique ou cole (Ctrl+V)"}
+          </p>
+        </div>
       ) : (
-        <UploadIcon size={24} className="text-muted-foreground" />
+        <p className={cn("text-sm text-center text-balance transition-opacity", isLoading ? "text-muted-foreground/50" : "text-muted-foreground")}>
+          {label ?? "Arraste, clique ou cole (Ctrl+V) um arquivo"}
+        </p>
       )}
-
-      <p className="text-muted-foreground text-sm text-center select-none mt-2 text-balance">
-        {label || "Arraste, clique ou cole (Ctrl+V) um arquivo"}
-      </p>
       <input
         ref={inputRef}
         type="file"
-        accept={accept || "*/*"}
-        onChange={handleFileChange}
+        accept={accept ?? "*/*"}
+        onChange={(e) => processFiles(e.target.files)}
         className="hidden"
         multiple={multiple}
         disabled={isLoading}

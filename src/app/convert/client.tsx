@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { Download, Trash2, Plus, Check, X, Loader2, ArrowRight } from "lucide-react";
+import { Download, Trash2, Plus, Check, X, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import FileDropzone from "@/components/file-dropzone";
+import { Spinner } from "@/components/spinner";
 
 type Format = "image/png" | "image/jpeg" | "image/webp";
 type ItemStatus = "idle" | "processing" | "done" | "error";
@@ -139,11 +140,14 @@ export default function ImageConverter() {
   if (items.length === 0) {
     return (
       <div className="min-h-screen flex items-center justify-center p-6">
-        <div className="w-full max-w-sm flex flex-col gap-4">
-          <p className="text-sm text-muted-foreground text-center">
-            Converta várias imagens entre PNG, JPEG e WebP de uma vez.
-          </p>
-          <FileDropzone onUpload={addFiles} accept="image/*" multiple />
+        <div className="w-full max-w-md">
+          <FileDropzone
+            onUpload={addFiles}
+            accept="image/*"
+            multiple
+            title="Converter imagens"
+            label="Arraste, clique ou cole (Ctrl+V) · PNG, JPEG, WebP"
+          />
         </div>
       </div>
     );
@@ -193,7 +197,7 @@ export default function ImageConverter() {
               </Button>
             )}
             <Button size="sm" onClick={convertAll} disabled={isProcessingAll || pendingCount === 0}>
-              {isProcessingAll && <Loader2 className="size-3.5 animate-spin" />}
+              {isProcessingAll && <Spinner className="size-3.5" />}
               Converter {pendingCount > 0 ? `(${pendingCount})` : ""}
             </Button>
           </div>
@@ -230,7 +234,7 @@ export default function ImageConverter() {
                     <span className="text-xs text-muted-foreground px-2 py-1 rounded-full bg-muted">Aguardando</span>
                   )}
                   {item.status === "processing" && (
-                    <Loader2 className="size-4 text-blue-500 animate-spin" />
+                    <Spinner className="size-4" />
                   )}
                   {item.status === "done" && (
                     <Check className="size-4 text-emerald-500" />

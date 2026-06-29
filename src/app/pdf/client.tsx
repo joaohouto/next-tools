@@ -26,10 +26,46 @@ function DropZone({ onFiles, compact = false, label }: {
 }) {
   const [over, setOver] = useState(false);
   const ref = useRef<HTMLInputElement>(null);
+  const onFilesRef = useRef(onFiles);
+  onFilesRef.current = onFiles;
+
+  useEffect(() => {
+    const onPaste = (e: ClipboardEvent) => {
+      const files = Array.from(e.clipboardData?.items ?? [])
+        .filter((i) => i.kind === "file")
+        .map((i) => i.getAsFile())
+        .filter((f): f is File => f !== null && (isPdf(f) || isImage(f)));
+      if (files.length) onFilesRef.current(files);
+    };
+    window.addEventListener("paste", onPaste);
+    return () => window.removeEventListener("paste", onPaste);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   const handle = (list: FileList | null) => {
     const files = Array.from(list ?? []).filter((f) => isPdf(f) || isImage(f));
     if (files.length) onFiles(files);
   };
+
+  if (compact) {
+    return (
+      <div
+        onDragOver={(e) => { e.preventDefault(); setOver(true); }}
+        onDragLeave={() => setOver(false)}
+        onDrop={(e) => { e.preventDefault(); setOver(false); handle(e.dataTransfer.files); }}
+        onClick={() => ref.current?.click()}
+        className={cn(
+          "border-2 border-dashed rounded-2xl cursor-pointer transition-all flex items-center justify-center gap-2 py-3 px-4 select-none",
+          over ? "border-primary bg-primary/5" : "border-foreground/20 hover:border-foreground/40 bg-muted/30",
+        )}
+      >
+        <FileText size={15} className={cn("text-muted-foreground shrink-0", over && "text-primary")} />
+        <p className="text-sm text-muted-foreground">{label ?? "Adicionar mais arquivos"}</p>
+        <input ref={ref} type="file" accept={ACCEPTED} multiple className="hidden"
+          onChange={(e) => handle(e.target.files)} />
+      </div>
+    );
+  }
+
   return (
     <div
       onDragOver={(e) => { e.preventDefault(); setOver(true); }}
@@ -37,18 +73,20 @@ function DropZone({ onFiles, compact = false, label }: {
       onDrop={(e) => { e.preventDefault(); setOver(false); handle(e.dataTransfer.files); }}
       onClick={() => ref.current?.click()}
       className={cn(
-        "border-2 border-dashed rounded-xl cursor-pointer transition-all flex flex-col items-center justify-center gap-2 select-none",
+        "border-2 border-dashed rounded-2xl cursor-pointer transition-all flex flex-col items-center justify-center gap-3 py-10 px-8 select-none bg-muted/30",
         over ? "border-primary bg-primary/5" : "border-foreground/20 hover:border-foreground/40",
-        compact ? "py-4 px-6" : "py-16 px-8",
       )}
     >
-      <FileText size={compact ? 20 : 36} className={cn("text-muted-foreground", over && "text-primary")} />
-      <p className="text-sm text-muted-foreground text-center text-balance">
-        {label ?? "Arraste PDFs ou imagens aqui"}
-      </p>
-      {!compact && (
-        <p className="text-xs text-muted-foreground/60">Mesclar · Dividir · Organizar · Comprimir · Converter</p>
-      )}
+      <div className="size-12 rounded-2xl bg-muted flex items-center justify-center">
+        <FileText size={22} className={cn("text-muted-foreground", over && "text-primary")} />
+      </div>
+      <div className="text-center">
+        <p className="text-sm font-medium">Ferramentas PDF</p>
+        <p className="text-xs text-muted-foreground mt-0.5 text-balance text-center">
+          {label ?? "Arraste, clique ou cole (Ctrl+V) um PDF ou imagem"}
+        </p>
+      </div>
+      <p className="text-xs text-muted-foreground/60 text-balance text-center">Mesclar · Dividir · Organizar · Comprimir · Converter</p>
       <input ref={ref} type="file" accept={ACCEPTED} multiple className="hidden"
         onChange={(e) => handle(e.target.files)} />
     </div>
@@ -153,7 +191,7 @@ export default function PdfTool() {
 
   return (
     <div className={cn("p-8 w-full min-h-screen", mode === "idle" && "flex items-center justify-center")}>
-      <div className="w-full md:max-w-[600px] mx-auto">
+      <div className={cn("w-full mx-auto", mode === "idle" ? "max-w-md" : "md:max-w-[600px]")}>
 
         {mode === "idle" && <DropZone onFiles={handleInitialDrop} />}
 

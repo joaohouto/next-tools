@@ -1,10 +1,10 @@
 import { cn } from "@/lib/utils";
 
-export function Spinner() {
+export function Spinner({ className }: { className?: string }) {
   const bars = Array(12).fill(0);
 
   return (
-    <div className="h-[24px] w-[24px]">
+    <div className={cn("h-[24px] w-[24px] shrink-0", className)}>
       <div className="relative left-1/2 top-1/2 h-[inherit] w-[inherit]">
         {bars.map((_, i) => (
           <div

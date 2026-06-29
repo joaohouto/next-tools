@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { PDFDocument } from "pdf-lib";
-import { Scissors, Download, ArrowLeft, ArrowRight, Loader2, Check } from "lucide-react";
+import { Scissors, Download, ArrowLeft, ArrowRight, Check } from "lucide-react";
+import { Spinner } from "@/components/spinner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -351,7 +352,7 @@ export function SplitView({ file, pageCount, onBack, onUseResult }: ViewProps) {
         <div className="flex flex-col gap-2">
           {bookmarksLoading && (
             <div className="flex items-center gap-2 py-2 text-sm text-muted-foreground">
-              <Loader2 size={14} className="animate-spin" /> Carregando marcadores…
+              <Spinner className="size-3.5" /> Carregando marcadores…
             </div>
           )}
           {bookmarks !== null && bookmarks.length === 0 && (
@@ -411,7 +412,7 @@ export function SplitView({ file, pageCount, onBack, onUseResult }: ViewProps) {
           </p>
           {splitting && splitProgress && (
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <Loader2 size={12} className="animate-spin" /> {splitProgress}
+              <Spinner className="size-3" /> {splitProgress}
             </div>
           )}
         </div>
@@ -456,7 +457,7 @@ export function SplitView({ file, pageCount, onBack, onUseResult }: ViewProps) {
       )}
 
       <Button onClick={doSplit} disabled={isDisabled}>
-        <Scissors size={15} />
+        {splitting ? <Spinner className="size-3.5" /> : <Scissors size={15} />}
         {splitting
           ? (splitProgress ?? "Dividindo…")
           : strategy === "select"

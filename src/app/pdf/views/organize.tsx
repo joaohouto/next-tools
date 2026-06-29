@@ -9,6 +9,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { motion } from "motion/react";
 import { type PageRot, type ViewProps } from "../types";
 import { getPdfjs, makePdfFile, triggerBytesDownload } from "../utils";
 
@@ -203,16 +204,19 @@ export function OrganizeView({ file, pageCount, onBack, onUseResult }: ViewProps
           const isSelected = selected.has(p.number);
           const rotated = p.delta % 180 !== 0;
           return (
-            <div
+            <motion.div
               key={p.number}
+              layout
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: dragIdx === i ? 0.4 : 1, scale: 1 }}
+              transition={{ duration: 0.2 }}
               draggable
               onDragStart={() => onDragStart(i)}
               onDragEnd={onDragEnd}
               onDragOver={(e) => onDragOver(e as unknown as DragEvent, i)}
               onDrop={(e) => onDrop(e as unknown as DragEvent, i)}
               className={cn(
-                "flex flex-col items-center gap-1 transition-all",
-                dragIdx === i && "opacity-40",
+                "flex flex-col items-center gap-1",
                 overIdx === i && dragIdx !== i && "ring-2 ring-primary ring-offset-2 rounded-lg",
               )}
             >
@@ -237,12 +241,14 @@ export function OrganizeView({ file, pageCount, onBack, onUseResult }: ViewProps
                 </button>
 
                 {/* Page card */}
-                <button
+                <motion.button
                   onClick={() => toggle(p.number)}
+                  animate={{ opacity: p.deleted ? 0.35 : 1 }}
+                  whileDrag={{ scale: 1.05, boxShadow: "0 8px 24px rgba(0,0,0,0.2)", zIndex: 50 }}
+                  transition={{ duration: 0.15 }}
                   className={cn(
-                    "relative w-full rounded-lg border-2 overflow-hidden transition-all focus:outline-none",
+                    "relative w-full rounded-lg border-2 overflow-hidden transition-colors focus:outline-none",
                     isSelected ? "border-primary ring-1 ring-primary" : "border-transparent hover:border-foreground/30",
-                    p.deleted && "opacity-40",
                   )}
                 >
                   <div className="w-full aspect-square bg-muted flex items-center justify-center overflow-hidden">
@@ -283,7 +289,7 @@ export function OrganizeView({ file, pageCount, onBack, onUseResult }: ViewProps
                       <span className="text-[10px] font-bold text-destructive bg-background/80 px-1 rounded">excluir</span>
                     </div>
                   )}
-                </button>
+                </motion.button>
               </div>
 
               <span className="text-[10px] text-muted-foreground">{p.number}</span>
@@ -313,7 +319,7 @@ export function OrganizeView({ file, pageCount, onBack, onUseResult }: ViewProps
                   <RotateCw size={12} className="text-muted-foreground" />
                 </button>
               </div>
-            </div>
+            </motion.div>
           );
         })}
       </div>
