@@ -81,6 +81,19 @@ export function useDeviceOrientation(): UseDeviceOrientationResult {
       return;
     }
 
+    // Chrome 74+ hides DeviceOrientationEvent on non-secure origins (non-HTTPS,
+    // non-localhost), making it appear unsupported when it's really a protocol issue.
+    const isSecure =
+      window.location.protocol === "https:" ||
+      window.location.hostname === "localhost" ||
+      window.location.hostname === "127.0.0.1";
+
+    if (!isSecure) {
+      setIsSupported(false);
+      setError(new Error("HTTPS required"));
+      return;
+    }
+
     if (typeof window.DeviceOrientationEvent !== "undefined") {
       setIsSupported(true);
     } else {
@@ -90,8 +103,9 @@ export function useDeviceOrientation(): UseDeviceOrientationResult {
     }
 
     const handleDeviceOrientation = (event: DeviceOrientationEvent) => {
-      // Os valores de beta e gamma vêm diretamente do evento
-      // São em graus, e podem variar de -180 a 180 (beta) e -90 a 90 (gamma)
+      // Browsers without a real sensor (e.g. desktop Chrome) fire the event with
+      // all-null values. Ignore those to avoid a false "level at 0,0" reading.
+      if (event.beta === null && event.gamma === null) return;
       setOrientation({
         alpha: event.alpha,
         beta: event.beta,

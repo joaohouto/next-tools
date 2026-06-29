@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 
 import { useHotkeys } from "react-hotkeys-hook";
 
@@ -20,11 +20,13 @@ import {
 import { useTheme } from "next-themes";
 import { getSortedByUsage } from "@/config/page-list";
 import { useToolUsage } from "@/hooks/use-tool-usage";
+import { accentFilter } from "@/lib/search";
 
 export function CommandMenu() {
   const [open, setOpen] = React.useState(false);
 
   const router = useRouter();
+  const pathname = usePathname();
   const { theme, setTheme } = useTheme();
   const { usage, trackUsage } = useToolUsage();
 
@@ -37,6 +39,7 @@ export function CommandMenu() {
   useHotkeys(
     "ctrl+k",
     () => {
+      if (pathname === "/") return;
       setOpen((open) => !open);
     },
     hotKeysOptions,
@@ -86,7 +89,7 @@ export function CommandMenu() {
   const sortedList = getSortedByUsage(usage);
 
   return (
-    <CommandDialog open={open} onOpenChange={setOpen}>
+    <CommandDialog open={open} onOpenChange={setOpen} filter={accentFilter}>
       <CommandInput placeholder="Pesquisar..." />
       <CommandList>
         <CommandEmpty>Sem resultados.</CommandEmpty>

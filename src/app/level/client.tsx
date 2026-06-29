@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect } from "react";
-import { BubbleLevelDisplay } from "./bubble-level-display";
+import { LevelDisplay } from "./level-display";
 
-export default function BubbleLevelPage() {
+export default function LevelPage() {
   useEffect(() => {
     let wakeLock: WakeLockSentinel | null = null;
 
@@ -30,7 +30,7 @@ export default function BubbleLevelPage() {
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center gap-8 p-6 bg-background">
-      <BubbleLevelDisplay axis="both" />
+      <LevelDisplay />
     </div>
   );
 }

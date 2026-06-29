@@ -2,7 +2,7 @@ import Client from "./client";
 
 import { PAGE_LIST } from "@/config/page-list";
 
-const pageMeta = PAGE_LIST.filter((p) => p.path === "/bubble-level")[0];
+const pageMeta = PAGE_LIST.filter((p) => p.path === "/level")[0];
 
 export const metadata = {
   title: pageMeta.title,

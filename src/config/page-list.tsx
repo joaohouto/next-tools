@@ -20,55 +20,91 @@ import {
 
 import type { ToolUsageRecord } from "@/hooks/use-tool-usage";
 
-export type PageCategory = "Imagens" | "Texto" | "Produtividade" | "Utilidades";
+export type PageCategory = "Geradores" | "Arquivos" | "Produtividade";
 
 export const UNORDERED_LIST = [
-  // Imagens
+  // Geradores — produzem algo a partir de parâmetros
+  {
+    title: "Senha",
+    path: "/password",
+    icon: <Lock />,
+    category: "Geradores" as PageCategory,
+  },
+  {
+    title: "QRCode",
+    path: "/qrcode",
+    icon: <QrCode />,
+    category: "Geradores" as PageCategory,
+  },
+  {
+    title: "Ícone",
+    path: "/icon",
+    icon: <Atom />,
+    category: "Geradores" as PageCategory,
+  },
+  {
+    title: "Emoji",
+    path: "/emoji",
+    icon: <Smile />,
+    category: "Geradores" as PageCategory,
+  },
+  {
+    title: "Caligrafia",
+    path: "/calligraphy",
+    icon: <Signature />,
+    category: "Geradores" as PageCategory,
+  },
+  {
+    title: "Pautas",
+    path: "/line-sheet",
+    icon: <NotebookPen />,
+    category: "Geradores" as PageCategory,
+  },
+
+  // Arquivos — processam ou analisam arquivos existentes
   {
     title: "Imagens",
     path: "/imagem",
     icon: <Images />,
-    category: "Imagens" as PageCategory,
+    category: "Arquivos" as PageCategory,
   },
-
-  // Texto
+  {
+    title: "PDF",
+    path: "/pdf",
+    icon: <FileText />,
+    category: "Arquivos" as PageCategory,
+  },
   {
     title: "OCR",
     path: "/ocr",
     icon: <ScanText />,
-    category: "Texto" as PageCategory,
+    category: "Arquivos" as PageCategory,
   },
   {
-    title: "Folha de Redação",
-    path: "/essay",
-    icon: <NotepadText />,
-    category: "Texto" as PageCategory,
-  },
-  {
-    title: "Folhas de Caligrafia",
-    path: "/calligraphy",
-    icon: <Signature />,
-    category: "Texto" as PageCategory,
-  },
-  {
-    title: "Folhas Pautadas",
-    path: "/line-sheet",
-    icon: <NotebookPen />,
-    category: "Texto" as PageCategory,
-  },
-  {
-    title: "Comparar Textos",
+    title: "Diferença",
     path: "/diff",
     icon: <GitCompare />,
-    category: "Texto" as PageCategory,
+    category: "Arquivos" as PageCategory,
+  },
+  {
+    title: "Forense",
+    path: "/forense",
+    icon: <ScanSearch />,
+    category: "Arquivos" as PageCategory,
   },
 
-  // Produtividade
+  // Produtividade — ferramentas de uso contínuo
   {
     title: "Pomodoro",
     path: "/pomodoro",
     icon: <Timer />,
     category: "Produtividade" as PageCategory,
+  },
+  {
+    title: "Redação",
+    path: "/essay",
+    icon: <NotepadText />,
+    category: "Geradores" as PageCategory,
   },
   {
     title: "Teleprompter",
@@ -82,55 +118,17 @@ export const UNORDERED_LIST = [
     icon: <AppWindow />,
     category: "Produtividade" as PageCategory,
   },
-
-  // Utilidades
-  {
-    title: "QRCode",
-    path: "/qrcode",
-    icon: <QrCode />,
-    category: "Utilidades" as PageCategory,
-  },
-  {
-    title: "Gerador de Senha",
-    path: "/password",
-    icon: <Lock />,
-    category: "Utilidades" as PageCategory,
-  },
-  {
-    title: "Emoji",
-    path: "/emoji",
-    icon: <Smile />,
-    category: "Utilidades" as PageCategory,
-  },
-  {
-    title: "Nível Bolha",
-    path: "/bubble-level",
-    icon: <Ruler />,
-    category: "Utilidades" as PageCategory,
-  },
   {
     title: "Webcam",
     path: "/webcam",
     icon: <Camera />,
-    category: "Utilidades" as PageCategory,
+    category: "Produtividade" as PageCategory,
   },
   {
-    title: "Estúdio de Ícone",
-    path: "/icon",
-    icon: <Atom />,
-    category: "Utilidades" as PageCategory,
-  },
-  {
-    title: "PDF",
-    path: "/pdf",
-    icon: <FileText />,
-    category: "Utilidades" as PageCategory,
-  },
-  {
-    title: "Analisador Forense",
-    path: "/forense",
-    icon: <ScanSearch />,
-    category: "Utilidades" as PageCategory,
+    title: "Nível",
+    path: "/level",
+    icon: <Ruler />,
+    category: "Produtividade" as PageCategory,
   },
 ];
 
@@ -139,10 +137,9 @@ export const PAGE_LIST = [...UNORDERED_LIST].sort((a, b) =>
 );
 
 export const CATEGORY_ORDER: PageCategory[] = [
-  "Imagens",
-  "Texto",
+  "Geradores",
+  "Arquivos",
   "Produtividade",
-  "Utilidades",
 ];
 
 export function getSortedByUsage(usage: ToolUsageRecord = {}) {

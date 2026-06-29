@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 
@@ -8,6 +9,7 @@ import { useToolUsage } from "@/hooks/use-tool-usage";
 import { getSortedByUsage, CATEGORY_ORDER } from "@/config/page-list";
 
 import { BadgeRotateBorder } from "@/components/badge-rotate-border";
+import { accentFilter } from "@/lib/search";
 import {
   Command,
   CommandEmpty,
@@ -15,6 +17,7 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
+  CommandSeparator,
 } from "@/components/ui/command";
 
 export default function Home() {
@@ -25,19 +28,20 @@ export default function Home() {
   const sortedList = getSortedByUsage(usage);
 
   return (
-    <div className="max-w-[400px] min-h-screen flex flex-col justify-center items-center mx-auto p-8">
-      <Image src="/icon.png" width={80} height={80} alt="tools" className="mb-4" />
-
-      <h1 className="mb-8">
+    <div className="min-h-screen flex flex-col items-center justify-center p-6 gap-5">
+      <div className="flex flex-col items-center gap-3">
+        <Image src="/icon.png" width={64} height={64} alt="tools" />
         <BadgeRotateBorder>tools</BadgeRotateBorder>
-      </h1>
+      </div>
 
-      <div className="w-full">
-        <Command className="rounded-lg border shadow-md w-full">
-          <CommandInput autoFocus={!isMobile} placeholder="Pesquisar..." />
-          <CommandList>
-            {CATEGORY_ORDER.map((category) => (
-              <CommandGroup key={category} heading={category}>
+      <Command filter={accentFilter} className="w-full max-w-md rounded-xl border shadow-2xl overflow-hidden [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-muted-foreground [&_[cmdk-group]:not([hidden])_~[cmdk-group]]:pt-0 [&_[cmdk-group]]:px-2 [&_[cmdk-input-wrapper]_svg]:h-5 [&_[cmdk-input-wrapper]_svg]:w-5 [&_[cmdk-input]]:h-12 [&_[cmdk-item]]:px-2 [&_[cmdk-item]]:py-3 [&_[cmdk-item]_svg]:h-5 [&_[cmdk-item]_svg]:w-5">
+        <CommandInput autoFocus={!isMobile} placeholder="Pesquisar..." />
+        <CommandList className="max-h-[65vh]">
+          <CommandEmpty>Nenhum resultado</CommandEmpty>
+          {CATEGORY_ORDER.map((category, i) => (
+            <React.Fragment key={category}>
+              {i > 0 && <CommandSeparator />}
+              <CommandGroup heading={category}>
                 {sortedList
                   .filter((p) => p.category === category)
                   .map((page) => (
@@ -53,21 +57,17 @@ export default function Home() {
                     </CommandItem>
                   ))}
               </CommandGroup>
-            ))}
+            </React.Fragment>
+          ))}
+        </CommandList>
+      </Command>
 
-            <CommandEmpty>Nenhum resultado</CommandEmpty>
-          </CommandList>
-        </Command>
-      </div>
-
-      <div className="w-full">
-        <a
-          className="text-xs text-muted-foreground mt-8 flex items-center justify-center gap-2"
-          href="https://github.com/joaohouto/next-tools"
-        >
-          github/joaohouto/next-tools
-        </a>
-      </div>
+      <a
+        className="text-xs text-muted-foreground opacity-40 hover:opacity-80 transition-opacity"
+        href="https://github.com/joaohouto/next-tools"
+      >
+        github/joaohouto/next-tools
+      </a>
     </div>
   );
 }
