@@ -21,7 +21,7 @@ function extractPalette(img: HTMLImageElement, count: number): string[] {
   const STEP = 16;
   for (let i = 0; i < data.length; i += 4) {
     if (data[i + 3] < 128) continue;
-    const r = Math.round(data[i] / STEP) * STEP, g = Math.round(data[i + 1] / STEP) * STEP, b = Math.round(data[i + 2] / STEP) * STEP;
+    const r = Math.min(255, Math.round(data[i] / STEP) * STEP), g = Math.min(255, Math.round(data[i + 1] / STEP) * STEP), b = Math.min(255, Math.round(data[i + 2] / STEP) * STEP);
     const brightness = (r + g + b) / 3;
     if (brightness > 240 || brightness < 15) continue;
     const key = `${r},${g},${b}`;

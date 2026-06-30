@@ -111,19 +111,21 @@ export function BeforeAfter({
   original,
   result,
   resultLabel,
+  originalLabel = "Original",
   checkerboard = false,
   children,
 }: {
   original: HTMLImageElement;
   result?: string | null;
   resultLabel: string;
+  originalLabel?: string;
   checkerboard?: boolean;
   children?: React.ReactNode;
 }) {
   return (
     <div className="grid md:grid-cols-2 gap-4">
       <div className="flex flex-col gap-2">
-        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Original</span>
+        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{originalLabel}</span>
         <div className="rounded-xl overflow-hidden border bg-muted/30">
           <img src={original.src} alt="Original" className="w-full h-auto" />
         </div>

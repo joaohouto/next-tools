@@ -11,8 +11,8 @@ export function Spinner({ className }: { className?: string }) {
             key={`spinner-bar-${i}`}
             aria-label={`spinner-bar-${i + 1}`}
             className={cn(
-              "absolute -left-[10%] -top-[3.9%] h-[8%] w-[24%] animate-spinner rounded-md bg-black dark:bg-white",
-              `bar:nth-child(${i + 1})`
+              "absolute -left-[10%] -top-[3.9%] h-[8%] w-[24%] animate-spinner rounded-md bg-current",
+              `bar:nth-child(${i + 1})`,
             )}
             style={{
               animationDelay: `-${1.3 - i * 0.1}s`,
