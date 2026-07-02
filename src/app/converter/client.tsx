@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Download, Trash2, Check, X, FileWarning, RotateCcw } from "lucide-react";
+import { Download, Trash2, Check, X, FileWarning, RotateCcw, ChevronsUpDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
+import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from "@/components/ui/command";
 import FileDropzone from "@/components/file-dropzone";
 import { Spinner } from "@/components/spinner";
 import { formatBytes } from "@/lib/utils";
@@ -39,6 +41,7 @@ export default function ConverterClient() {
   const [activeCategory, setActiveCategory] = useState<ConverterCategory | null>(null);
   const [targetFormat, setTargetFormat] = useState<TargetFormat | null>(null);
   const [processing, setProcessing] = useState(false);
+  const [formatPickerOpen, setFormatPickerOpen] = useState(false);
 
   useEffect(() => () => {
     items.forEach((i) => { if (i.previewUrl) URL.revokeObjectURL(i.previewUrl); });
@@ -109,22 +112,17 @@ export default function ConverterClient() {
   return (
     <div className="p-8 w-full min-h-screen">
       <div className="max-w-6xl mx-auto flex flex-col gap-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-lg font-semibold">Converter</h1>
-            <p className="text-sm text-muted-foreground">Converta imagens, PDFs e mais, direto no navegador.</p>
-          </div>
-          {items.length > 0 && (
-            <Button variant="outline" size="sm" onClick={reset}>
-              <RotateCcw size={14} /> Limpar tudo
-            </Button>
-          )}
-        </div>
-
         <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_320px_minmax(0,1fr)] items-start">
           {/* Coluna 1 — entrada */}
           <div className="flex flex-col gap-3">
-            <ColumnHeader>Arquivos</ColumnHeader>
+            <div className="flex items-center justify-between">
+              <ColumnHeader>Arquivos</ColumnHeader>
+              {items.length > 0 && (
+                <Button variant="outline" size="sm" onClick={reset}>
+                  <RotateCcw size={14} /> Limpar tudo
+                </Button>
+              )}
+            </div>
             <FileDropzone onUpload={addFiles} accept={ACCEPT_ALL} multiple
               title="Arraste ou clique para enviar" label="Imagens, PDF e mais" />
             <div className="flex flex-col gap-2">
@@ -186,17 +184,42 @@ export default function ConverterClient() {
                 {targets.length > 0 ? (
                   <div className="flex flex-col gap-1.5">
                     <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Formato</Label>
-                    <div className="flex flex-wrap gap-2">
-                      {targets.map((t) => (
-                        <button key={t.id} onClick={() => setTargetFormat(t)}
-                          className={cn(
-                            "px-3 py-1 rounded-lg border text-xs font-medium transition-all",
-                            targetFormat?.id === t.id ? "bg-primary text-primary-foreground border-primary" : "hover:border-foreground/40",
-                          )}>
-                          {t.label}
-                        </button>
-                      ))}
-                    </div>
+                    <Popover open={formatPickerOpen} onOpenChange={setFormatPickerOpen}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          aria-expanded={formatPickerOpen}
+                          className="w-full justify-between font-normal"
+                        >
+                          {targetFormat ? targetFormat.label : "Selecione um formato…"}
+                          <ChevronsUpDown className="opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                        <Command>
+                          <CommandInput placeholder="Buscar formato..." />
+                          <CommandList>
+                            <CommandEmpty>Nenhum formato encontrado.</CommandEmpty>
+                            <CommandGroup>
+                              {targets.map((t) => (
+                                <CommandItem
+                                  key={t.id}
+                                  value={t.label}
+                                  onSelect={() => {
+                                    setTargetFormat(t);
+                                    setFormatPickerOpen(false);
+                                  }}
+                                >
+                                  <Check className={cn(targetFormat?.id === t.id ? "opacity-100" : "opacity-0")} />
+                                  {t.label}
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
                     {targetFormat?.limited && (
                       <p className="text-xs text-amber-600 dark:text-amber-500">
                         Conversão limitada — pode não preservar toda a formatação original.
