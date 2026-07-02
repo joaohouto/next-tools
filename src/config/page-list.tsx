@@ -16,6 +16,7 @@ import {
   GitCompare,
   FileText,
   Images,
+  ArrowLeftRight,
 } from "lucide-react";
 
 import type { ToolUsageRecord } from "@/hooks/use-tool-usage";
@@ -87,6 +88,13 @@ export const UNORDERED_LIST = [
     description: "Mescle, divida, organize, comprima e converta arquivos PDF sem upload.",
     path: "/pdf",
     icon: <FileText />,
+    category: "Arquivos" as PageCategory,
+  },
+  {
+    title: "Converter",
+    description: "Converta imagens, PDFs, planilhas e documentos entre formatos, sem upload.",
+    path: "/converter",
+    icon: <ArrowLeftRight />,
     category: "Arquivos" as PageCategory,
   },
   {
