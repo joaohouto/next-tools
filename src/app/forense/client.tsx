@@ -1064,7 +1064,7 @@ export default function ForenseClient() {
         doc.setCreationDate(new Date(0));
         doc.setModificationDate(new Date(0));
         const clean = await doc.save({ useObjectStreams: true });
-        const blob = new Blob([clean], { type: "application/pdf" });
+        const blob = new Blob([clean as BlobPart], { type: "application/pdf" });
         const a = document.createElement("a");
         a.href = URL.createObjectURL(blob);
         a.download = file.name.replace(/\.pdf$/i, "") + "-anon.pdf";
