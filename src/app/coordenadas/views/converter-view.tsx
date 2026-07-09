@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type KeyboardEvent } from "react";
 import { Copy } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -55,14 +55,33 @@ export function ConverterView({ coordinate, onChange }: ConverterViewProps) {
     if (parsed) onChange(parsed);
   };
 
+  const applyOnEnter = (apply: () => void) => (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      apply();
+      e.currentTarget.blur();
+    }
+  };
+
   return (
     <div className="flex flex-col gap-4">
       <Card>
         <CardContent className="flex flex-col gap-3 pt-6">
           <Label>Decimal (DD)</Label>
           <div className="flex flex-col gap-2 sm:flex-row">
-            <Input value={ddLat} onChange={(e) => setDdLat(e.target.value)} onBlur={applyDd} placeholder="Latitude" />
-            <Input value={ddLng} onChange={(e) => setDdLng(e.target.value)} onBlur={applyDd} placeholder="Longitude" />
+            <Input
+              value={ddLat}
+              onChange={(e) => setDdLat(e.target.value)}
+              onBlur={applyDd}
+              onKeyDown={applyOnEnter(applyDd)}
+              placeholder="Latitude"
+            />
+            <Input
+              value={ddLng}
+              onChange={(e) => setDdLng(e.target.value)}
+              onBlur={applyDd}
+              onKeyDown={applyOnEnter(applyDd)}
+              placeholder="Longitude"
+            />
             <Button
               variant="outline"
               size="icon"
@@ -80,7 +99,13 @@ export function ConverterView({ coordinate, onChange }: ConverterViewProps) {
         <CardContent className="flex flex-col gap-3 pt-6">
           <Label>Graus, minutos e segundos (DMS)</Label>
           <div className="flex flex-col gap-2 sm:flex-row">
-            <Input value={dms} onChange={(e) => setDms(e.target.value)} onBlur={applyDms} placeholder={`23°33'01"S 46°38'02"W`} />
+            <Input
+              value={dms}
+              onChange={(e) => setDms(e.target.value)}
+              onBlur={applyDms}
+              onKeyDown={applyOnEnter(applyDms)}
+              placeholder={`23°33'01"S 46°38'02"W`}
+            />
             <Button
               variant="outline"
               size="icon"
@@ -98,7 +123,13 @@ export function ConverterView({ coordinate, onChange }: ConverterViewProps) {
         <CardContent className="flex flex-col gap-3 pt-6">
           <Label>UTM</Label>
           <div className="flex flex-col gap-2 sm:flex-row">
-            <Input value={utm} onChange={(e) => setUtm(e.target.value)} onBlur={applyUtm} placeholder="23K 456789E 7345678N" />
+            <Input
+              value={utm}
+              onChange={(e) => setUtm(e.target.value)}
+              onBlur={applyUtm}
+              onKeyDown={applyOnEnter(applyUtm)}
+              placeholder="23K 456789E 7345678N"
+            />
             <Button
               variant="outline"
               size="icon"
@@ -114,7 +145,7 @@ export function ConverterView({ coordinate, onChange }: ConverterViewProps) {
 
       {!coordinate && (
         <p className="text-sm text-muted-foreground">
-          Selecione um ponto na aba Mapa ou digite coordenadas decimais para começar.
+          Clique no mapa, use sua localização atual ou digite coordenadas decimais para começar.
         </p>
       )}
     </div>
