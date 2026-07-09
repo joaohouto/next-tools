@@ -6,7 +6,7 @@ import { Compass, Ruler } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
 
 import { bearingToCompass, haversineDistance, initialBearing } from "../distance-utils";
 import type { Coordinate } from "../types";
@@ -27,12 +27,17 @@ export function DistanceView({ origin }: DistanceViewProps) {
 
   return (
     <div className="flex flex-col gap-4">
-      <Card>
-        <CardContent className="flex flex-col gap-3 pt-6">
+      <div className="flex flex-col gap-4 rounded-2xl border bg-muted/20 p-4">
+        <div className="flex flex-col gap-2">
           <div className="flex items-center justify-between">
-            <Label>Ponto A</Label>
+            <span className="text-xs uppercase tracking-wide text-muted-foreground">Ponto A</span>
             {origin && (
-              <Button variant="ghost" size="sm" onClick={() => setPointA(origin)}>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="transition-transform active:scale-95"
+                onClick={() => setPointA(origin)}
+              >
                 Usar local atual
               </Button>
             )}
@@ -43,40 +48,44 @@ export function DistanceView({ origin }: DistanceViewProps) {
               value={pointA.lat}
               onChange={(e) => setPointA({ ...pointA, lat: parseFloat(e.target.value) || 0 })}
               placeholder="Latitude"
+              className="bg-background tabular-nums"
             />
             <Input
               type="number"
               value={pointA.lng}
               onChange={(e) => setPointA({ ...pointA, lng: parseFloat(e.target.value) || 0 })}
               placeholder="Longitude"
+              className="bg-background tabular-nums"
             />
           </div>
-        </CardContent>
-      </Card>
+        </div>
 
-      <Card>
-        <CardContent className="flex flex-col gap-3 pt-6">
-          <Label>Ponto B</Label>
+        <Separator />
+
+        <div className="flex flex-col gap-2">
+          <span className="text-xs uppercase tracking-wide text-muted-foreground">Ponto B</span>
           <div className="flex flex-col gap-2 sm:flex-row">
             <Input
               type="number"
               value={pointB.lat}
               onChange={(e) => setPointB({ ...pointB, lat: parseFloat(e.target.value) || 0 })}
               placeholder="Latitude"
+              className="bg-background tabular-nums"
             />
             <Input
               type="number"
               value={pointB.lng}
               onChange={(e) => setPointB({ ...pointB, lng: parseFloat(e.target.value) || 0 })}
               placeholder="Longitude"
+              className="bg-background tabular-nums"
             />
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       <Card>
         <CardContent className="flex flex-col items-center gap-3 pt-6 text-center">
-          <div className="flex items-center gap-2 text-2xl font-semibold">
+          <div className="flex items-center gap-2 text-2xl font-bold tabular-nums tracking-tight">
             <Ruler className="h-5 w-5 text-muted-foreground" />
             {distance.toFixed(2)} {unit}
           </div>
@@ -85,10 +94,20 @@ export function DistanceView({ origin }: DistanceViewProps) {
             Rumo inicial: {bearing.toFixed(0)}° ({bearingToCompass(bearing)})
           </div>
           <div className="flex gap-2">
-            <Button variant={unit === "km" ? "default" : "outline"} size="sm" onClick={() => setUnit("km")}>
+            <Button
+              variant={unit === "km" ? "default" : "outline"}
+              size="sm"
+              className="transition-transform active:scale-95"
+              onClick={() => setUnit("km")}
+            >
               km
             </Button>
-            <Button variant={unit === "mi" ? "default" : "outline"} size="sm" onClick={() => setUnit("mi")}>
+            <Button
+              variant={unit === "mi" ? "default" : "outline"}
+              size="sm"
+              className="transition-transform active:scale-95"
+              onClick={() => setUnit("mi")}
+            >
               milhas
             </Button>
           </div>

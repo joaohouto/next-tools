@@ -11,9 +11,12 @@ import { cn } from "@/lib/utils";
 
 import type { Coordinate } from "../types";
 
+// Usa as CSS vars do tema (não hex fixo) para o marcador acompanhar o
+// dark mode automaticamente — o navegador resolve `var(--destructive)`
+// em tempo de paint, sem precisar recriar o ícone ao trocar de tema.
 const markerIcon = L.divIcon({
   className: "coordenadas-marker",
-  html: `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="#ef4444" stroke="#7f1d1d" stroke-width="1"><path d="M12 22s8-7.58 8-13a8 8 0 1 0-16 0c0 5.42 8 13 8 13Z"/><circle cx="12" cy="9" r="2.5" fill="white" stroke="none"/></svg>`,
+  html: `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="hsl(var(--destructive))" stroke="hsl(var(--background))" stroke-width="1.5"><path d="M12 22s8-7.58 8-13a8 8 0 1 0-16 0c0 5.42 8 13 8 13Z"/><circle cx="12" cy="9" r="2.5" fill="hsl(var(--background))" stroke="none"/></svg>`,
   iconSize: [32, 32],
   iconAnchor: [16, 32],
   popupAnchor: [0, -32],

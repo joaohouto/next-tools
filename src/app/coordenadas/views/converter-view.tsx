@@ -4,9 +4,10 @@ import { useEffect, useState, type KeyboardEvent } from "react";
 import { Copy } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 import {
   ddToDms,
@@ -62,11 +63,28 @@ export function ConverterView({ coordinate, onChange }: ConverterViewProps) {
     }
   };
 
+  const copyButton = (format: "dd" | "dms" | "utm", label: string) => (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          variant="outline"
+          size="icon"
+          className="shrink-0 transition-transform active:scale-95"
+          disabled={!coordinate}
+          onClick={() => coordinate && copyCoordinate(coordinate, format)}
+        >
+          <Copy className="h-4 w-4" />
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent>{label}</TooltipContent>
+    </Tooltip>
+  );
+
   return (
     <div className="flex flex-col gap-4">
-      <Card>
-        <CardContent className="flex flex-col gap-3 pt-6">
-          <Label>Decimal (DD)</Label>
+      <div className="flex flex-col gap-4 rounded-2xl border bg-muted/20 p-4">
+        <div className="flex flex-col gap-2">
+          <Label className="text-xs uppercase tracking-wide text-muted-foreground">Decimal (DD)</Label>
           <div className="flex flex-col gap-2 sm:flex-row">
             <Input
               value={ddLat}
@@ -74,6 +92,7 @@ export function ConverterView({ coordinate, onChange }: ConverterViewProps) {
               onBlur={applyDd}
               onKeyDown={applyOnEnter(applyDd)}
               placeholder="Latitude"
+              className="bg-background tabular-nums"
             />
             <Input
               value={ddLng}
@@ -81,23 +100,18 @@ export function ConverterView({ coordinate, onChange }: ConverterViewProps) {
               onBlur={applyDd}
               onKeyDown={applyOnEnter(applyDd)}
               placeholder="Longitude"
+              className="bg-background tabular-nums"
             />
-            <Button
-              variant="outline"
-              size="icon"
-              className="shrink-0"
-              disabled={!coordinate}
-              onClick={() => coordinate && copyCoordinate(coordinate, "dd")}
-            >
-              <Copy className="h-4 w-4" />
-            </Button>
+            {copyButton("dd", "Copiar coordenadas (DD)")}
           </div>
-        </CardContent>
-      </Card>
+        </div>
 
-      <Card>
-        <CardContent className="flex flex-col gap-3 pt-6">
-          <Label>Graus, minutos e segundos (DMS)</Label>
+        <Separator />
+
+        <div className="flex flex-col gap-2">
+          <Label className="text-xs uppercase tracking-wide text-muted-foreground">
+            Graus, minutos e segundos (DMS)
+          </Label>
           <div className="flex flex-col gap-2 sm:flex-row">
             <Input
               value={dms}
@@ -105,23 +119,16 @@ export function ConverterView({ coordinate, onChange }: ConverterViewProps) {
               onBlur={applyDms}
               onKeyDown={applyOnEnter(applyDms)}
               placeholder={`23°33'01"S 46°38'02"W`}
+              className="bg-background tabular-nums"
             />
-            <Button
-              variant="outline"
-              size="icon"
-              className="shrink-0"
-              disabled={!coordinate}
-              onClick={() => coordinate && copyCoordinate(coordinate, "dms")}
-            >
-              <Copy className="h-4 w-4" />
-            </Button>
+            {copyButton("dms", "Copiar coordenadas (DMS)")}
           </div>
-        </CardContent>
-      </Card>
+        </div>
 
-      <Card>
-        <CardContent className="flex flex-col gap-3 pt-6">
-          <Label>UTM</Label>
+        <Separator />
+
+        <div className="flex flex-col gap-2">
+          <Label className="text-xs uppercase tracking-wide text-muted-foreground">UTM</Label>
           <div className="flex flex-col gap-2 sm:flex-row">
             <Input
               value={utm}
@@ -129,22 +136,15 @@ export function ConverterView({ coordinate, onChange }: ConverterViewProps) {
               onBlur={applyUtm}
               onKeyDown={applyOnEnter(applyUtm)}
               placeholder="23K 456789E 7345678N"
+              className="bg-background tabular-nums"
             />
-            <Button
-              variant="outline"
-              size="icon"
-              className="shrink-0"
-              disabled={!coordinate}
-              onClick={() => coordinate && copyCoordinate(coordinate, "utm")}
-            >
-              <Copy className="h-4 w-4" />
-            </Button>
+            {copyButton("utm", "Copiar coordenadas (UTM)")}
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {!coordinate && (
-        <p className="text-sm text-muted-foreground">
+        <p className="text-center text-sm text-muted-foreground">
           Clique no mapa, use sua localização atual ou digite coordenadas decimais para começar.
         </p>
       )}

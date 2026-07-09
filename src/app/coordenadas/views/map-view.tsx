@@ -96,7 +96,7 @@ export function MapView({ coordinate, onChange }: MapViewProps) {
                 <button
                   key={result.place_id}
                   onClick={() => selectResult(result)}
-                  className="flex w-full items-start gap-2 px-3 py-2 text-left text-sm hover:bg-accent"
+                  className="flex w-full items-start gap-2 px-3 py-2 text-left text-sm transition-colors hover:bg-accent active:bg-accent/80"
                 >
                   <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
                   <span className="line-clamp-2">{result.display_name}</span>
@@ -110,7 +110,7 @@ export function MapView({ coordinate, onChange }: MapViewProps) {
           variant="outline"
           onClick={geolocation.requestAccess}
           disabled={geolocation.isLoading}
-          className="shrink-0"
+          className="shrink-0 transition-transform active:scale-95"
         >
           {geolocation.isLoading ? (
             <Loader2 className="h-4 w-4 animate-spin" />
@@ -123,7 +123,16 @@ export function MapView({ coordinate, onChange }: MapViewProps) {
 
       {geolocation.error && <p className="text-sm text-destructive">{geolocation.error}</p>}
 
-      <MapLoader coordinate={coordinate} onSelect={onChange} />
+      <div className="relative">
+        <MapLoader coordinate={coordinate} onSelect={onChange} />
+        {!coordinate && (
+          <div className="pointer-events-none absolute inset-x-0 bottom-3 z-[500] flex justify-center">
+            <span className="rounded-full border bg-background/90 px-3 py-1.5 text-xs text-muted-foreground shadow-sm backdrop-blur-sm">
+              Clique no mapa ou busque um endereço para começar
+            </span>
+          </div>
+        )}
+      </div>
 
       {coordinate && (
         <p className="text-sm text-muted-foreground">
