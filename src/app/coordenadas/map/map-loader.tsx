@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 
-import { Skeleton } from "@/components/ui/skeleton";
+import { Spinner } from "@/components/spinner";
 
 import type { Coordinate } from "../types";
 
@@ -10,7 +10,11 @@ import type { Coordinate } from "../types";
 // só no client (ssr: false) — primeiro uso de next/dynamic neste projeto.
 const LeafletMap = dynamic(() => import("./leaflet-map"), {
   ssr: false,
-  loading: () => <Skeleton className="h-[400px] w-full rounded-2xl" />,
+  loading: () => (
+    <div className="flex h-[400px] w-full items-center justify-center rounded-2xl border bg-muted/20">
+      <Spinner className="size-6" />
+    </div>
+  ),
 });
 
 interface MapLoaderProps {

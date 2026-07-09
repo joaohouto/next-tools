@@ -117,3 +117,10 @@
 .coordenadas-map-dark .leaflet-tile-pane {
   filter: invert(1) hue-rotate(180deg) brightness(0.95) contrast(0.9);
 }
+
+/* O container do Leaflet tem fundo cinza claro (#ddd) por padrão, visível
+   nas áreas sem tile carregado durante zoom/pan — troca pra um tom escuro
+   consistente com o tema, já que o filtro acima só cobre o tile-pane. */
+.coordenadas-map-dark .leaflet-container {
+  background: hsl(var(--muted));
+}

@@ -91,7 +91,7 @@ export function MapView({ coordinate, onChange }: MapViewProps) {
             <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground" />
           )}
           {results.length > 0 && (
-            <Card className="absolute z-[1000] mt-1 max-h-64 w-full overflow-auto py-1">
+            <Card className="absolute z-[1100] mt-1 max-h-64 w-full overflow-auto py-1">
               {results.map((result) => (
                 <button
                   key={result.place_id}
