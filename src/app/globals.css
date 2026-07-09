@@ -111,3 +111,9 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Inverte só os tiles do mapa (não os marcadores/popups) para um visual
+   dark-friendly sem depender de um provedor de tiles com API key. */
+.coordenadas-map-dark .leaflet-tile-pane {
+  filter: invert(1) hue-rotate(180deg) brightness(0.95) contrast(0.9);
+}
