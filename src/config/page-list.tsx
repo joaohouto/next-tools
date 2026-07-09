@@ -16,6 +16,7 @@ import {
   GitCompare,
   FileText,
   Images,
+  MapPin,
 } from "lucide-react";
 
 import type { ToolUsageRecord } from "@/hooks/use-tool-usage";
@@ -145,6 +146,13 @@ export const UNORDERED_LIST = [
     description: "Meça inclinação de superfícies com o acelerômetro do dispositivo.",
     path: "/level",
     icon: <Ruler />,
+    category: "Produtividade" as PageCategory,
+  },
+  {
+    title: "Coordenadas",
+    description: "Localize, converta e compartilhe coordenadas geográficas com mapa interativo e busca de endereços.",
+    path: "/coordenadas",
+    icon: <MapPin />,
     category: "Produtividade" as PageCategory,
   },
 ];
