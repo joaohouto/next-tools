@@ -13,7 +13,7 @@ export default function CoordenadasClient() {
   const [coordinate, setCoordinate] = useState<Coordinate | null>(null);
 
   return (
-    <div className="min-h-screen p-6 flex items-center justify-center">
+    <div className="min-h-screen p-6 flex items-center justify-center isolate">
       <div className="w-full max-w-2xl pt-4 flex flex-col gap-6">
         <Tabs defaultValue="location" className="w-full">
           <TabsList className="grid w-full grid-cols-2">

@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Loader2, LocateFixed, MapPin, Search } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { LocateFixed, MapPin, Search } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Spinner } from "@/components/spinner";
 import { useDebounce } from "@/hooks/use-debounce";
 import { useGeolocation } from "@/hooks/use-geolocation";
 
@@ -26,8 +27,14 @@ export function MapView({ coordinate, onChange }: MapViewProps) {
   const [isResolvingAddress, setIsResolvingAddress] = useState(false);
   const debouncedQuery = useDebounce(query, 500);
   const geolocation = useGeolocation();
+  const skipNextSearchRef = useRef(false);
 
   useEffect(() => {
+    if (skipNextSearchRef.current) {
+      skipNextSearchRef.current = false;
+      return;
+    }
+
     if (debouncedQuery.trim().length < 3) {
       setResults([]);
       return;
@@ -71,6 +78,7 @@ export function MapView({ coordinate, onChange }: MapViewProps) {
   }, [geolocation.position]);
 
   const selectResult = (result: NominatimResult) => {
+    skipNextSearchRef.current = true;
     onChange({ lat: parseFloat(result.lat), lng: parseFloat(result.lon) });
     setQuery(result.display_name);
     setResults([]);
@@ -84,11 +92,12 @@ export function MapView({ coordinate, onChange }: MapViewProps) {
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
+            onBlur={() => setTimeout(() => setResults([]), 150)}
             placeholder="Buscar endereço, cidade, ponto..."
             className="pl-9"
           />
           {isSearching && (
-            <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground" />
+            <Spinner className="absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           )}
           {results.length > 0 && (
             <Card className="absolute z-[1100] mt-1 max-h-64 w-full overflow-auto py-1">
@@ -113,7 +122,7 @@ export function MapView({ coordinate, onChange }: MapViewProps) {
           className="shrink-0 transition-transform active:scale-95"
         >
           {geolocation.isLoading ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
+            <Spinner className="size-4" />
           ) : (
             <LocateFixed className="h-4 w-4" />
           )}
