@@ -20,6 +20,7 @@ import {
 } from "../coordinate-utils";
 import { copyCoordinate } from "../share-utils";
 import type { Coordinate } from "../types";
+import { CoordinateSystemsHint } from "./coordinate-systems-hint";
 
 interface ConverterViewProps {
   coordinate: Coordinate | null;
@@ -83,6 +84,13 @@ export function ConverterView({ coordinate, onChange }: ConverterViewProps) {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-4 rounded-2xl border bg-muted/20 p-4">
+        <div className="flex items-center justify-between">
+          <span className="text-xs uppercase tracking-wide text-muted-foreground">Formatos</span>
+          <CoordinateSystemsHint />
+        </div>
+
+        <Separator />
+
         <div className="flex flex-col gap-2">
           <Label className="text-xs uppercase tracking-wide text-muted-foreground">Decimal (DD)</Label>
           <div className="flex flex-col gap-2 sm:flex-row">
