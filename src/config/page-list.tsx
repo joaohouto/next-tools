@@ -17,6 +17,8 @@ import {
   FileText,
   Images,
   MapPin,
+  Regex,
+  BookOpen,
 } from "lucide-react";
 
 import type { ToolUsageRecord } from "@/hooks/use-tool-usage";
@@ -111,6 +113,13 @@ export const UNORDERED_LIST = [
     icon: <ScanSearch />,
     category: "Arquivos" as PageCategory,
   },
+  {
+    title: "EPUB/PDF",
+    description: "Converta e-books EPUB em PDF e vice-versa direto no navegador.",
+    path: "/epub",
+    icon: <BookOpen />,
+    category: "Arquivos" as PageCategory,
+  },
 
   // Produtividade — ferramentas de uso contínuo
   {
@@ -153,6 +162,13 @@ export const UNORDERED_LIST = [
     description: "Localize, converta e compartilhe coordenadas geográficas com mapa interativo e busca de endereços.",
     path: "/coordenadas",
     icon: <MapPin />,
+    category: "Produtividade" as PageCategory,
+  },
+  {
+    title: "Regex",
+    description: "Teste e construa expressões regulares com destaque de correspondências em tempo real.",
+    path: "/regex",
+    icon: <Regex />,
     category: "Produtividade" as PageCategory,
   },
 ];
