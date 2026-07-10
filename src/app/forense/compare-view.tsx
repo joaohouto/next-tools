@@ -55,6 +55,11 @@ function extractGroups(a: ForensicResult, b: ForensicResult): FieldGroup[] {
     a: a.corruption?.status,
     b: b.corruption?.status,
   });
+  integrity.fields.push({
+    key: "Zip bomb",
+    a: a.zipBomb?.severity,
+    b: b.zipBomb?.severity,
+  });
   groups.push(integrity);
 
   // ── EXIF ──

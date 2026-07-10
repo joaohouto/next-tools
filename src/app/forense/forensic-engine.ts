@@ -1,4 +1,4 @@
-import type { BasicInfo, SignatureResult } from "./forensic-types";
+import type { BasicInfo, SignatureResult, EntropyRegionResult } from "./forensic-types";
 
 // ─── MD5 (pure JS) ────────────────────────────────────────────────────────────
 
@@ -74,6 +74,56 @@ export function computeEntropy(data: Uint8Array): number {
   return Math.round(entropy * 1000) / 1000;
 }
 
+// ─── Entropy by region — catches a small encrypted/packed payload hidden ──────
+// inside an otherwise normal-entropy file, which the whole-file average misses.
+
+const ENTROPY_MAX_WINDOWS = 4000;
+const ENTROPY_HIGH_THRESHOLD = 7.5;
+const ENTROPY_OVERALL_LOW_CUTOFF = 6.5;
+
+export function analyzeEntropyRegions(data: Uint8Array, overallEntropy: number, windowSize = 4096): EntropyRegionResult {
+  const effectiveWindowSize = data.length / windowSize > ENTROPY_MAX_WINDOWS
+    ? Math.ceil(data.length / ENTROPY_MAX_WINDOWS)
+    : windowSize;
+
+  const windows: { offset: number; entropy: number }[] = [];
+  for (let off = 0; off < data.length; off += effectiveWindowSize) {
+    const chunk = data.subarray(off, Math.min(off + effectiveWindowSize, data.length));
+    if (chunk.length === 0) continue;
+    windows.push({ offset: off, entropy: computeEntropy(chunk) });
+  }
+
+  let maxWindowEntropy = 0;
+  const highEntropyRegions: EntropyRegionResult["highEntropyRegions"] = [];
+  let current: { offsetStart: number; offsetEnd: number; entropy: number } | null = null;
+
+  for (const w of windows) {
+    if (w.entropy > maxWindowEntropy) maxWindowEntropy = w.entropy;
+    if (w.entropy > ENTROPY_HIGH_THRESHOLD) {
+      const end = Math.min(w.offset + effectiveWindowSize, data.length);
+      if (current && w.offset <= current.offsetEnd) {
+        current.offsetEnd = end;
+        current.entropy = Math.max(current.entropy, w.entropy);
+      } else {
+        if (current) highEntropyRegions.push(current);
+        current = { offsetStart: w.offset, offsetEnd: end, entropy: w.entropy };
+      }
+    }
+  }
+  if (current) highEntropyRegions.push(current);
+
+  const highEntropyCoverage = highEntropyRegions.reduce((s, r) => s + (r.offsetEnd - r.offsetStart), 0) / Math.max(1, data.length);
+  const suspicious = maxWindowEntropy > ENTROPY_HIGH_THRESHOLD &&
+    (overallEntropy < ENTROPY_OVERALL_LOW_CUTOFF || highEntropyCoverage < 0.3);
+
+  return {
+    windowSize: effectiveWindowSize,
+    maxWindowEntropy,
+    highEntropyRegions: highEntropyRegions.slice(0, 20),
+    suspicious,
+  };
+}
+
 // ─── Magic Bytes Table ────────────────────────────────────────────────────────
 
 interface MagicEntry {
@@ -116,16 +166,28 @@ const MAGIC_TABLE: MagicEntry[] = [
   { bytes: [0xcf, 0xfa, 0xed, 0xfe], type: "Mach-O (64-bit)" },
 ];
 
-export function detectSignature(data: Uint8Array, declaredMime: string): SignatureResult {
+export function detectSignature(data: Uint8Array, declaredMime: string, declaredExt?: string): SignatureResult {
   const hex = Array.from(data.slice(0, 16)).map(b => b.toString(16).toUpperCase().padStart(2, "0")).join(" ");
   for (const entry of MAGIC_TABLE) {
     if (entry.bytes.every((b, i) => data[i] === b)) {
       const match = matchesMime(entry.type, declaredMime);
-      return { detectedType: entry.type, declaredType: declaredMime || "unknown", match, magicBytes: hex };
+      const extensionMatch = matchesExtension(entry.type, declaredExt ?? "");
+      return { detectedType: entry.type, declaredType: declaredMime || "unknown", match, extensionMatch, magicBytes: hex };
     }
   }
-  return { detectedType: "Unknown", declaredType: declaredMime || "unknown", match: true, magicBytes: hex };
+  return { detectedType: "Unknown", declaredType: declaredMime || "unknown", match: true, extensionMatch: true, magicBytes: hex };
 }
+
+// Signature types that should never legitimately match a "safe" declared MIME —
+// executables/archives disguised behind an image/document extension are exactly
+// what a magic-byte/MIME mismatch check should catch.
+const EXECUTABLE_LIKE_TYPES = new Set([
+  "PE (Windows EXE/DLL)",
+  "ELF (Linux executable)",
+  "Mach-O (32-bit)",
+  "Mach-O (64-bit)",
+  "Java Class",
+]);
 
 function matchesMime(detected: string, mime: string): boolean {
   const m = mime.toLowerCase();
@@ -142,6 +204,26 @@ function matchesMime(detected: string, mime: string): boolean {
   if (detected.startsWith("TIFF")) return m.includes("tiff") || m.includes("tif");
   if (detected === "BMP") return m.includes("bmp");
   if (detected === "WebM/MKV") return m.includes("webm") || m.includes("matroska");
+  if (EXECUTABLE_LIKE_TYPES.has(detected)) {
+    return m.includes("msdownload") || m.includes("x-executable") || m.includes("x-elf") ||
+      m.includes("java-vm") || m.includes("java-archive") || m.includes("octet-stream");
+  }
+  return true;
+}
+
+const EXECUTABLE_EXTENSIONS = new Set(["exe", "dll", "sys", "scr", "com", "msi"]);
+const OLE_EXTENSIONS = new Set(["doc", "xls", "ppt", "msi", "msg"]);
+const ZIP_LIKE_EXTENSIONS = new Set(["zip", "docx", "xlsx", "pptx", "docm", "xlsm", "pptm", "odt", "ods", "odp", "jar", "apk"]);
+
+function matchesExtension(detected: string, ext: string): boolean {
+  const e = ext.toLowerCase();
+  if (detected === "PE (Windows EXE/DLL)") return EXECUTABLE_EXTENSIONS.has(e);
+  if (detected === "ELF (Linux executable)") return e === "" || e === "elf" || e === "bin" || e === "so";
+  if (detected === "Mach-O (32-bit)" || detected === "Mach-O (64-bit)") return e === "" || e === "dylib" || e === "bin";
+  if (detected === "Java Class") return e === "class";
+  if (detected === "DOC/XLS/PPT (OLE)") return OLE_EXTENSIONS.has(e);
+  if (detected.startsWith("ZIP")) return ZIP_LIKE_EXTENSIONS.has(e);
+  // No strong extension expectation for this signature — don't flag it.
   return true;
 }
 
@@ -171,7 +253,7 @@ export async function computeBasicInfo(file: File, buffer: ArrayBuffer): Promise
   const md5hash = md5(u8);
   const entropy = computeEntropy(u8);
   const ext = file.name.includes(".") ? file.name.split(".").pop()!.toLowerCase() : "";
-  const signature = detectSignature(u8, file.type);
+  const signature = detectSignature(u8, file.type, ext);
 
   return {
     name: file.name,
