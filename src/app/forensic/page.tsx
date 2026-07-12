@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { PAGE_LIST } from "@/config/page-list";
 import Client from "./client";
 
-const pageMeta = PAGE_LIST.find((p) => p.path === "/forense")!;
+const pageMeta = PAGE_LIST.find((p) => p.path === "/forensic")!;
 
 export const metadata: Metadata = {
   title: pageMeta.title,

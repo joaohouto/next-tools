@@ -49,13 +49,13 @@ export function SplitView({ file, pageCount, onBack, onUseResult }: ViewProps) {
   const [strategy, setStrategy] = useState<SplitStrategy>("select");
   const [thumbs, setThumbs] = useState<Map<number, string>>(new Map());
   const [selected, setSelected] = useState<Set<number>>(new Set());
-  const [everyN, setEveryN] = useState(1);
-  const [numParts, setNumParts] = useState(2);
+  const [everyN, setEveryN] = useState("1");
+  const [numParts, setNumParts] = useState("2");
   const [bookmarks, setBookmarks] = useState<BookmarkEntry[] | null>(null);
   const [bookmarksLoading, setBookmarksLoading] = useState(false);
   const [results, setResults] = useState<{ label: string; bytes: Uint8Array }[] | null>(null);
   const [splitting, setSplitting] = useState(false);
-  const [targetSize, setTargetSize] = useState(5);
+  const [targetSize, setTargetSize] = useState("5");
   const [sizeUnit, setSizeUnit] = useState<SizeUnit>("MB");
   const [splitProgress, setSplitProgress] = useState<string | null>(null);
 
@@ -111,6 +111,10 @@ export function SplitView({ file, pageCount, onBack, onUseResult }: ViewProps) {
     })();
   }, [strategy]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const everyNVal = Math.max(1, parseInt(everyN) || 1);
+  const numPartsVal = Math.max(2, Math.min(parseInt(numParts) || 2, pageCount));
+  const targetSizeVal = Math.max(1, parseFloat(targetSize) || 1);
+
   const toggle = (n: number) =>
     setSelected((prev) => {
       const next = new Set(prev);
@@ -123,8 +127,8 @@ export function SplitView({ file, pageCount, onBack, onUseResult }: ViewProps) {
       const sorted = [...selected].sort((a, b) => a - b);
       return sorted.length ? [{ label: `${sorted.length} páginas selecionadas`, pages: sorted }] : [];
     }
-    if (strategy === "every-n")    return buildEveryN(pageCount, everyN);
-    if (strategy === "equal")      return buildEqual(pageCount, numParts);
+    if (strategy === "every-n")    return buildEveryN(pageCount, everyNVal);
+    if (strategy === "equal")      return buildEqual(pageCount, numPartsVal);
     if (strategy === "individual") return Array.from({ length: pageCount }, (_, i) => ({ label: `Página ${i + 1}`, pages: [i + 1] }));
     if (strategy === "bookmarks" && bookmarks?.length) {
       return bookmarks.map((bm, i) => {
@@ -137,8 +141,8 @@ export function SplitView({ file, pageCount, onBack, onUseResult }: ViewProps) {
 
   const previewCount = (() => {
     if (strategy === "select")     return selected.size > 0 ? 1 : 0;
-    if (strategy === "every-n")    return Math.ceil(pageCount / Math.max(1, everyN));
-    if (strategy === "equal")      return Math.max(2, Math.min(numParts, pageCount));
+    if (strategy === "every-n")    return Math.ceil(pageCount / everyNVal);
+    if (strategy === "equal")      return numPartsVal;
     if (strategy === "individual") return pageCount;
     if (strategy === "bookmarks")  return bookmarks?.length ?? 0;
     if (strategy === "by-size")    return null;
@@ -167,7 +171,7 @@ export function SplitView({ file, pageCount, onBack, onUseResult }: ViewProps) {
       const built: { label: string; bytes: Uint8Array }[] = [];
 
       if (strategy === "by-size") {
-        const limitBytes = Math.max(1, targetSize) * (sizeUnit === "MB" ? 1024 * 1024 : 1024);
+        const limitBytes = targetSizeVal * (sizeUnit === "MB" ? 1024 * 1024 : 1024);
         setSplitProgress(`Analisando ${pageCount} páginas…`);
         const pageSizes: number[] = [];
         for (let i = 0; i < pageCount; i++) {
@@ -241,8 +245,7 @@ export function SplitView({ file, pageCount, onBack, onUseResult }: ViewProps) {
   const isDisabled =
     splitting ||
     (strategy === "select" && selected.size === 0) ||
-    (strategy === "bookmarks" && (!bookmarks || !bookmarks.length)) ||
-    (strategy === "by-size" && (targetSize <= 0 || isNaN(targetSize)));
+    (strategy === "bookmarks" && (!bookmarks || !bookmarks.length));
 
   return (
     <div className="flex flex-col gap-4">
@@ -323,7 +326,7 @@ export function SplitView({ file, pageCount, onBack, onUseResult }: ViewProps) {
           <div className="flex flex-col gap-2">
             <Label htmlFor="every-n-input">Páginas por parte</Label>
             <Input id="every-n-input" type="number" min={1} max={pageCount} value={everyN}
-              onChange={(e) => { setEveryN(Math.max(1, parseInt(e.target.value) || 1)); setResults(null); }} />
+              onChange={(e) => { setEveryN(e.target.value); setResults(null); }} />
           </div>
           <p className="text-xs text-muted-foreground">Gera {previewCount} parte{previewCount !== 1 ? "s" : ""}</p>
         </div>
@@ -334,10 +337,10 @@ export function SplitView({ file, pageCount, onBack, onUseResult }: ViewProps) {
           <div className="flex flex-col gap-2">
             <Label htmlFor="equal-parts-input">Número de partes</Label>
             <Input id="equal-parts-input" type="number" min={2} max={pageCount} value={numParts}
-              onChange={(e) => { setNumParts(Math.max(2, Math.min(parseInt(e.target.value) || 2, pageCount))); setResults(null); }} />
+              onChange={(e) => { setNumParts(e.target.value); setResults(null); }} />
           </div>
           <p className="text-xs text-muted-foreground">
-            ~{Math.ceil(pageCount / Math.max(2, numParts))} página{Math.ceil(pageCount / Math.max(2, numParts)) !== 1 ? "s" : ""} por parte
+            ~{Math.ceil(pageCount / numPartsVal)} página{Math.ceil(pageCount / numPartsVal) !== 1 ? "s" : ""} por parte
           </p>
         </div>
       )}
@@ -391,7 +394,7 @@ export function SplitView({ file, pageCount, onBack, onUseResult }: ViewProps) {
               <Input
                 type="number" min={1} step={1}
                 value={targetSize}
-                onChange={(e) => { setTargetSize(Math.max(1, parseFloat(e.target.value) || 1)); setResults(null); }}
+                onChange={(e) => { setTargetSize(e.target.value); setResults(null); }}
                 className="flex-1"
               />
               <div className="flex border rounded-lg overflow-hidden text-xs">
@@ -463,7 +466,7 @@ export function SplitView({ file, pageCount, onBack, onUseResult }: ViewProps) {
           : strategy === "select"
             ? selected.size === 0 ? "Selecione páginas" : `Exportar ${selected.size} página${selected.size !== 1 ? "s" : ""}`
             : strategy === "by-size"
-            ? `Dividir por tamanho (máx. ${targetSize} ${sizeUnit})`
+            ? `Dividir por tamanho (máx. ${targetSizeVal} ${sizeUnit})`
             : previewCount
             ? `Dividir em ${previewCount} parte${previewCount !== 1 ? "s" : ""}`
             : "Dividir"}

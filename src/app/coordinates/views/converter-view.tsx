@@ -7,7 +7,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 import {
   ddToDms,
@@ -57,12 +61,13 @@ export function ConverterView({ coordinate, onChange }: ConverterViewProps) {
     if (parsed) onChange(parsed);
   };
 
-  const applyOnEnter = (apply: () => void) => (e: KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") {
-      apply();
-      e.currentTarget.blur();
-    }
-  };
+  const applyOnEnter =
+    (apply: () => void) => (e: KeyboardEvent<HTMLInputElement>) => {
+      if (e.key === "Enter") {
+        apply();
+        e.currentTarget.blur();
+      }
+    };
 
   const copyButton = (format: "dd" | "dms" | "utm", label: string) => (
     <Tooltip>
@@ -85,14 +90,18 @@ export function ConverterView({ coordinate, onChange }: ConverterViewProps) {
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-4 rounded-2xl border bg-muted/20 p-4">
         <div className="flex items-center justify-between">
-          <span className="text-xs uppercase tracking-wide text-muted-foreground">Formatos</span>
+          <span className="text-xs uppercase tracking-wide text-muted-foreground">
+            Formatos
+          </span>
           <CoordinateSystemsHint />
         </div>
 
         <Separator />
 
         <div className="flex flex-col gap-2">
-          <Label className="text-xs uppercase tracking-wide text-muted-foreground">Decimal (DD)</Label>
+          <Label className="text-xs uppercase tracking-wide text-muted-foreground">
+            Decimal (DD)
+          </Label>
           <div className="flex flex-col gap-2 sm:flex-row">
             <Input
               value={ddLat}
@@ -136,7 +145,9 @@ export function ConverterView({ coordinate, onChange }: ConverterViewProps) {
         <Separator />
 
         <div className="flex flex-col gap-2">
-          <Label className="text-xs uppercase tracking-wide text-muted-foreground">UTM</Label>
+          <Label className="text-xs uppercase tracking-wide text-muted-foreground">
+            UTM
+          </Label>
           <div className="flex flex-col gap-2 sm:flex-row">
             <Input
               value={utm}
@@ -150,12 +161,6 @@ export function ConverterView({ coordinate, onChange }: ConverterViewProps) {
           </div>
         </div>
       </div>
-
-      {!coordinate && (
-        <p className="text-center text-sm text-muted-foreground">
-          Clique no mapa, use sua localização atual ou digite coordenadas decimais para começar.
-        </p>
-      )}
     </div>
   );
 }

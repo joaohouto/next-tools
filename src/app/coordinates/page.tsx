@@ -3,7 +3,7 @@ import Client from "./client";
 import type { Metadata } from "next";
 import { PAGE_LIST } from "@/config/page-list";
 
-const pageMeta = PAGE_LIST.filter((p) => p.path === "/coordenadas")[0];
+const pageMeta = PAGE_LIST.filter((p) => p.path === "/coordinates")[0];
 
 export const metadata: Metadata = {
   title: pageMeta.title,

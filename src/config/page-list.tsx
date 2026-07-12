@@ -29,49 +29,56 @@ export const UNORDERED_LIST = [
   // Geradores — produzem algo a partir de parâmetros
   {
     title: "Senha",
-    description: "Gere senhas fortes e aleatórias com controle de comprimento e caracteres.",
+    description:
+      "Gere senhas fortes e aleatórias com controle de comprimento e caracteres.",
     path: "/password",
     icon: <Lock />,
     category: "Geradores" as PageCategory,
   },
   {
     title: "QRCode",
-    description: "Crie QR codes a partir de qualquer texto, URL ou dado instantaneamente.",
+    description:
+      "Crie QR codes a partir de qualquer texto, URL ou dado instantaneamente.",
     path: "/qrcode",
     icon: <QrCode />,
     category: "Geradores" as PageCategory,
   },
   {
     title: "Ícone",
-    description: "Crie e exporte ícones personalizados para apps, projetos e apresentações.",
+    description:
+      "Crie e exporte ícones personalizados para apps, projetos e apresentações.",
     path: "/icon",
     icon: <Atom />,
     category: "Geradores" as PageCategory,
   },
   {
     title: "Emoji",
-    description: "Encontre e copie emojis rapidamente com busca por nome ou categoria.",
+    description:
+      "Encontre e copie emojis rapidamente com busca por nome ou categoria.",
     path: "/emoji",
     icon: <Smile />,
     category: "Geradores" as PageCategory,
   },
   {
     title: "Redação",
-    description: "Gere folhas de redação personalizadas prontas para impressão.",
+    description:
+      "Gere folhas de redação personalizadas prontas para impressão.",
     path: "/essay",
     icon: <NotepadText />,
     category: "Geradores" as PageCategory,
   },
   {
     title: "Caligrafia",
-    description: "Crie folhas de exercício de caligrafia com pauta guia para impressão.",
+    description:
+      "Crie folhas de exercício de caligrafia com pauta guia para impressão.",
     path: "/calligraphy",
     icon: <Signature />,
     category: "Geradores" as PageCategory,
   },
   {
     title: "Pautas",
-    description: "Gere folhas pautadas personalizadas com espaçamento e margens configuráveis.",
+    description:
+      "Gere folhas pautadas personalizadas com espaçamento e margens configuráveis.",
     path: "/line-sheet",
     icon: <NotebookPen />,
     category: "Geradores" as PageCategory,
@@ -80,21 +87,24 @@ export const UNORDERED_LIST = [
   // Arquivos — processam ou analisam arquivos existentes
   {
     title: "Imagens",
-    description: "Comprima, converta, redimensione e edite imagens direto no navegador.",
-    path: "/imagem",
+    description:
+      "Comprima, converta, redimensione e edite imagens direto no navegador.",
+    path: "/image",
     icon: <Images />,
     category: "Arquivos" as PageCategory,
   },
   {
     title: "PDF",
-    description: "Mescle, divida, organize, comprima e converta arquivos PDF sem upload.",
+    description:
+      "Mescle, divida, organize, comprima e converta arquivos PDF sem upload.",
     path: "/pdf",
     icon: <FileText />,
     category: "Arquivos" as PageCategory,
   },
   {
     title: "OCR",
-    description: "Extraia texto de imagens com reconhecimento óptico de caracteres.",
+    description:
+      "Extraia texto de imagens com reconhecimento óptico de caracteres.",
     path: "/ocr",
     icon: <ScanText />,
     category: "Arquivos" as PageCategory,
@@ -108,8 +118,9 @@ export const UNORDERED_LIST = [
   },
   {
     title: "Forense",
-    description: "Analise metadados, hash e propriedades ocultas de qualquer arquivo.",
-    path: "/forense",
+    description:
+      "Analise metadados, hash e propriedades ocultas de qualquer arquivo.",
+    path: "/forensic",
     icon: <ScanSearch />,
     category: "Arquivos" as PageCategory,
   },
@@ -117,21 +128,24 @@ export const UNORDERED_LIST = [
   // Produtividade — ferramentas de uso contínuo
   {
     title: "Pomodoro",
-    description: "Temporizador Pomodoro para sessões de foco e pausas organizadas.",
+    description:
+      "Temporizador Pomodoro para sessões de foco e pausas organizadas.",
     path: "/pomodoro",
     icon: <Timer />,
     category: "Produtividade" as PageCategory,
   },
   {
     title: "Teleprompter",
-    description: "Leia scripts com rolagem automática e controle de velocidade.",
+    description:
+      "Leia scripts com rolagem automática e controle de velocidade.",
     path: "/teleprompter",
     icon: <SquareTerminal />,
     category: "Produtividade" as PageCategory,
   },
   {
     title: "ZapLink",
-    description: "Abra conversas no WhatsApp sem precisar salvar o número na agenda.",
+    description:
+      "Abra conversas no WhatsApp sem precisar salvar o número na agenda.",
     path: "/zaplink",
     icon: <AppWindow />,
     category: "Produtividade" as PageCategory,
@@ -145,28 +159,32 @@ export const UNORDERED_LIST = [
   },
   {
     title: "Nível",
-    description: "Meça inclinação de superfícies com o acelerômetro do dispositivo.",
+    description:
+      "Meça inclinação de superfícies com o acelerômetro do dispositivo.",
     path: "/level",
     icon: <Ruler />,
     category: "Produtividade" as PageCategory,
   },
   {
     title: "Coordenadas",
-    description: "Localize, converta e compartilhe coordenadas geográficas com mapa interativo e busca de endereços.",
-    path: "/coordenadas",
+    description:
+      "Localize, converta e compartilhe coordenadas geográficas com mapa interativo e busca de endereços.",
+    path: "/coordinates",
     icon: <MapPin />,
     category: "Produtividade" as PageCategory,
   },
   {
     title: "Regex",
-    description: "Teste e construa expressões regulares com destaque de correspondências em tempo real.",
+    description:
+      "Teste e construa expressões regulares com destaque de correspondências em tempo real.",
     path: "/regex",
     icon: <Regex />,
     category: "Produtividade" as PageCategory,
   },
   {
     title: "Máquina do Tempo",
-    description: "Programe uma viagem no tempo com um painel de controle completo — e nada confiável.",
+    description:
+      "Programe uma viagem no tempo com um painel de controle completo — e nada confiável.",
     path: "/maquina-do-tempo",
     icon: <Zap />,
     category: "Produtividade" as PageCategory,
