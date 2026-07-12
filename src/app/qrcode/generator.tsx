@@ -1,15 +1,12 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { Copy, Download, QrCode, ImagePlus } from "lucide-react";
 import { copyQRCode, exportQRCode } from "@/lib/export-image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Slider } from "@/components/ui/slider";
@@ -19,6 +16,12 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 import type { IconWeight } from "@phosphor-icons/react";
 import { buildWifiPayload, type WifiConfig } from "./wifi";
+import { buildPixPayload, type PixConfig } from "./pix";
+import {
+  buildVCardPayload, buildEmailPayload, buildSmsPayload, buildTelPayload, buildGeoPayload, buildEventPayload,
+  type VCardConfig, type EmailConfig, type SmsConfig, type TelConfig, type GeoConfig, type EventConfig,
+} from "./payloads";
+import { WifiForm, PixForm, VCardForm, EmailForm, SmsForm, TelForm, GeoForm, EventForm } from "./forms";
 import { CENTER_ICONS, ICON_WEIGHTS, iconToDataUri, fileToDataUrl } from "./center-image";
 
 const SIZE_OPTIONS = [128, 256, 512, 1024];
@@ -28,18 +31,35 @@ const CENTER_IMAGE_MIN = 24;
 // 60px+ starts failing to decode even at error-correction level "H".
 const CENTER_IMAGE_MAX = 56;
 const CENTER_IMAGE_DEFAULT = 40;
-const SECURITY_LABELS: Record<WifiConfig["security"], string> = {
-  WPA: "WPA/WPA2",
-  WEP: "WEP",
-  nopass: "Nenhuma",
-};
+
+type QrType = "text" | "wifi" | "pix" | "vcard" | "email" | "sms" | "tel" | "geo" | "event";
+
+const QR_TYPE_OPTIONS: { value: QrType; label: string }[] = [
+  { value: "text", label: "Texto / URL" },
+  { value: "wifi", label: "WiFi" },
+  { value: "pix", label: "PIX" },
+  { value: "vcard", label: "Contato (vCard)" },
+  { value: "email", label: "E-mail" },
+  { value: "sms", label: "SMS" },
+  { value: "tel", label: "Telefone" },
+  { value: "geo", label: "Localização" },
+  { value: "event", label: "Evento" },
+];
 
 type CenterMode = "none" | "icon" | "upload";
 
 export function QRCodeGenerator() {
-  const [qrType, setQrType] = useState<"text" | "wifi">("text");
+  const [qrType, setQrType] = useState<QrType>("text");
   const [text, setText] = useState("");
   const [wifi, setWifi] = useState<WifiConfig>({ ssid: "", password: "", security: "WPA", hidden: false });
+  const [pix, setPix] = useState<PixConfig>({ key: "", merchantName: "", merchantCity: "", amount: "", description: "" });
+  const [vcard, setVcard] = useState<VCardConfig>({ name: "", phone: "", email: "", org: "", url: "" });
+  const [email, setEmail] = useState<EmailConfig>({ to: "", subject: "", body: "" });
+  const [sms, setSms] = useState<SmsConfig>({ phone: "", message: "" });
+  const [tel, setTel] = useState<TelConfig>({ phone: "" });
+  const [geo, setGeo] = useState<GeoConfig>({ lat: "", lon: "", label: "" });
+  const [calendarEvent, setCalendarEvent] = useState<EventConfig>({ title: "", start: "", end: "", location: "", description: "" });
+
   const [config, setConfig] = useState({
     bgColor: "#FFFFFF",
     fgColor: "#000000",
@@ -56,8 +76,35 @@ export function QRCodeGenerator() {
   const imageRef = useRef<HTMLDivElement>(null);
   const isMobile = useIsMobile();
 
-  const value = qrType === "wifi" ? buildWifiPayload(wifi) : text;
-  const hasValue = qrType === "wifi" ? !!wifi.ssid : !!text;
+  const value = useMemo(() => {
+    switch (qrType) {
+      case "wifi": return wifi.ssid ? buildWifiPayload(wifi) : "";
+      case "pix": return pix.key && pix.merchantName && pix.merchantCity ? buildPixPayload(pix) : "";
+      case "vcard": return vcard.name ? buildVCardPayload(vcard) : "";
+      case "email": return email.to ? buildEmailPayload(email) : "";
+      case "sms": return sms.phone ? buildSmsPayload(sms) : "";
+      case "tel": return tel.phone ? buildTelPayload(tel) : "";
+      case "geo": return geo.lat && geo.lon ? buildGeoPayload(geo) : "";
+      case "event": return calendarEvent.title && calendarEvent.start ? buildEventPayload(calendarEvent) : "";
+      default: return text;
+    }
+  }, [qrType, text, wifi, pix, vcard, email, sms, tel, geo, calendarEvent]);
+
+  const hasValue = !!value;
+
+  const fileNameBase = useMemo(() => {
+    switch (qrType) {
+      case "wifi": return wifi.ssid;
+      case "pix": return pix.key;
+      case "vcard": return vcard.name;
+      case "email": return email.to;
+      case "sms": return sms.phone;
+      case "tel": return tel.phone;
+      case "geo": return `${geo.lat},${geo.lon}`;
+      case "event": return calendarEvent.title;
+      default: return text;
+    }
+  }, [qrType, text, wifi, pix, vcard, email, sms, tel, geo, calendarEvent]);
 
   const selectedCenterIcon = centerIconId ? CENTER_ICONS.find((i) => i.id === centerIconId) : undefined;
   const centerImageSrc =
@@ -99,63 +146,32 @@ export function QRCodeGenerator() {
 
       {/* Type selector + Settings, grouped with a tighter gap between them */}
       <div className="w-full flex flex-col gap-3">
-        <Tabs value={qrType} onValueChange={(v) => setQrType(v as "text" | "wifi")} className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="text">Texto</TabsTrigger>
-            <TabsTrigger value="wifi">WiFi</TabsTrigger>
-          </TabsList>
+        <Select value={qrType} onValueChange={(v) => setQrType(v as QrType)}>
+          <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            {QR_TYPE_OPTIONS.map(({ value: v, label }) => (
+              <SelectItem key={v} value={v}>{label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
 
-          <TabsContent value="text" className="mt-4">
-            <Input
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              placeholder="URL, texto, contato..."
-              autoFocus={!isMobile}
-              className="text-center"
-            />
-          </TabsContent>
-
-          <TabsContent value="wifi" className="mt-4 flex flex-col gap-3">
-            <div className="flex flex-col gap-1.5">
-              <Label className="text-xs text-muted-foreground">Nome da rede (SSID)</Label>
-              <Input
-                value={wifi.ssid}
-                onChange={(e) => setWifi({ ...wifi, ssid: e.target.value })}
-                placeholder="Minha rede WiFi"
-                autoFocus={!isMobile}
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="flex flex-col gap-1.5">
-                <Label className="text-xs text-muted-foreground">Segurança</Label>
-                <Select
-                  value={wifi.security}
-                  onValueChange={(v) => setWifi({ ...wifi, security: v as WifiConfig["security"] })}
-                >
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {(Object.keys(SECURITY_LABELS) as WifiConfig["security"][]).map((s) => (
-                      <SelectItem key={s} value={s}>{SECURITY_LABELS[s]}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <Label className="text-xs text-muted-foreground">Senha</Label>
-                <Input
-                  value={wifi.password}
-                  onChange={(e) => setWifi({ ...wifi, password: e.target.value })}
-                  placeholder="Senha da rede"
-                  disabled={wifi.security === "nopass"}
-                />
-              </div>
-            </div>
-            <div className="flex items-center justify-between rounded-lg border px-3 py-2">
-              <Label className="text-xs text-muted-foreground">Rede oculta</Label>
-              <Switch checked={wifi.hidden} onCheckedChange={(c) => setWifi({ ...wifi, hidden: c })} />
-            </div>
-          </TabsContent>
-        </Tabs>
+        {qrType === "text" && (
+          <Input
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            placeholder="URL, texto, contato..."
+            autoFocus={!isMobile}
+            className="text-center"
+          />
+        )}
+        {qrType === "wifi" && <WifiForm value={wifi} onChange={(p) => setWifi((v) => ({ ...v, ...p }))} />}
+        {qrType === "pix" && <PixForm value={pix} onChange={(p) => setPix((v) => ({ ...v, ...p }))} />}
+        {qrType === "vcard" && <VCardForm value={vcard} onChange={(p) => setVcard((v) => ({ ...v, ...p }))} />}
+        {qrType === "email" && <EmailForm value={email} onChange={(p) => setEmail((v) => ({ ...v, ...p }))} />}
+        {qrType === "sms" && <SmsForm value={sms} onChange={(p) => setSms((v) => ({ ...v, ...p }))} />}
+        {qrType === "tel" && <TelForm value={tel} onChange={(p) => setTel((v) => ({ ...v, ...p }))} />}
+        {qrType === "geo" && <GeoForm value={geo} onChange={(p) => setGeo((v) => ({ ...v, ...p }))} />}
+        {qrType === "event" && <EventForm value={calendarEvent} onChange={(p) => setCalendarEvent((v) => ({ ...v, ...p }))} />}
 
         {/* Settings */}
         <div className="w-full rounded-xl border bg-muted/20 p-4 flex flex-col gap-4">
@@ -349,7 +365,7 @@ export function QRCodeGenerator() {
         <Button
           disabled={!hasValue}
           onClick={() =>
-            exportQRCode(imageRef.current, config, `qrcode-${qrType === "wifi" ? wifi.ssid : text}`)
+            exportQRCode(imageRef.current, config, `qrcode-${fileNameBase}`)
           }
         >
           <Download className="size-4" />
