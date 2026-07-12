@@ -17,6 +17,8 @@ import {
   FileText,
   Images,
   MapPin,
+  Regex,
+  Zap,
 } from "lucide-react";
 
 import type { ToolUsageRecord } from "@/hooks/use-tool-usage";
@@ -153,6 +155,20 @@ export const UNORDERED_LIST = [
     description: "Localize, converta e compartilhe coordenadas geográficas com mapa interativo e busca de endereços.",
     path: "/coordenadas",
     icon: <MapPin />,
+    category: "Produtividade" as PageCategory,
+  },
+  {
+    title: "Regex",
+    description: "Teste e construa expressões regulares com destaque de correspondências em tempo real.",
+    path: "/regex",
+    icon: <Regex />,
+    category: "Produtividade" as PageCategory,
+  },
+  {
+    title: "Máquina do Tempo",
+    description: "Programe uma viagem no tempo com um painel de controle completo — e nada confiável.",
+    path: "/maquina-do-tempo",
+    icon: <Zap />,
     category: "Produtividade" as PageCategory,
   },
 ];

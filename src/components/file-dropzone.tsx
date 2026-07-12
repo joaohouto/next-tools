@@ -14,6 +14,7 @@ export default function FileDropzone({
   isLoading = false,
   className,
   icon,
+  compact = false,
 }: {
   onUpload: (files: File[]) => void;
   accept?: string;
@@ -23,6 +24,8 @@ export default function FileDropzone({
   isLoading?: boolean;
   className?: string;
   icon?: React.ReactNode;
+  /** Shrinks padding, icon box, and text — for use in tight spaces like popovers. */
+  compact?: boolean;
 }) {
   const [highlight, setHighlight] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -67,7 +70,8 @@ export default function FileDropzone({
       onDrop={(e) => { e.preventDefault(); setHighlight(false); processFiles(e.dataTransfer.files); }}
       onClick={() => !isLoading && inputRef.current?.click()}
       className={cn(
-        "w-full flex flex-col items-center justify-center gap-3 py-10 px-6 border-2 rounded-2xl cursor-pointer transition-all select-none",
+        "w-full flex flex-col items-center justify-center border-2 rounded-2xl cursor-pointer transition-all select-none",
+        compact ? "gap-1.5 py-4 px-3 rounded-xl" : "gap-3 py-10 px-6",
         highlight
           ? "border-primary bg-primary/5"
           : "border-dashed border-foreground/20 hover:border-foreground/40 bg-muted/30",
@@ -75,21 +79,21 @@ export default function FileDropzone({
         className,
       )}
     >
-      <div className="size-12 rounded-2xl bg-muted flex items-center justify-center">
+      <div className={cn("rounded-2xl bg-muted flex items-center justify-center", compact ? "size-7 rounded-lg" : "size-12")}>
         {isLoading
-          ? <Spinner className="size-5" />
-          : (icon ?? <UploadIcon size={22} className="text-muted-foreground" />)
+          ? <Spinner className={compact ? "size-3.5" : "size-5"} />
+          : (icon ?? <UploadIcon size={compact ? 15 : 22} className="text-muted-foreground" />)
         }
       </div>
       {title ? (
         <div className="text-center">
-          <p className="text-sm font-medium">{title}</p>
-          <p className={cn("text-xs text-muted-foreground mt-0.5 text-balance transition-opacity", isLoading && "opacity-50")}>
+          <p className={cn("font-medium", compact ? "text-xs" : "text-sm")}>{title}</p>
+          <p className={cn("text-muted-foreground mt-0.5 text-balance transition-opacity", compact ? "text-[11px]" : "text-xs", isLoading && "opacity-50")}>
             {label ?? "Arraste, clique ou cole (Ctrl+V)"}
           </p>
         </div>
       ) : (
-        <p className={cn("text-sm text-center text-balance transition-opacity", isLoading ? "text-muted-foreground/50" : "text-muted-foreground")}>
+        <p className={cn("text-center text-balance transition-opacity", compact ? "text-[11px]" : "text-sm", isLoading ? "text-muted-foreground/50" : "text-muted-foreground")}>
           {label ?? "Arraste, clique ou cole (Ctrl+V) um arquivo"}
         </p>
       )}

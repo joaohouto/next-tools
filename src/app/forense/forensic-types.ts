@@ -4,6 +4,7 @@ export interface SignatureResult {
   detectedType: string;
   declaredType: string;
   match: boolean;
+  extensionMatch: boolean;
   magicBytes: string;
 }
 
@@ -100,6 +101,55 @@ export interface ZipEntry {
   date: string;
 }
 
+export type ZipBombSeverity = "ok" | "warning" | "danger";
+
+export interface ZipBombEntryFlag {
+  name: string;
+  ratio: number;
+  uncompressedSize: number;
+  compressedSize: number;
+  reason: "high_ratio" | "nested_archive" | "deep_path" | "inconsistent_stored";
+}
+
+export interface ZipBombCheck {
+  severity: ZipBombSeverity;
+  entryCount: number;
+  totalUncompressedSize: number;
+  totalCompressedSize: number;
+  overallRatio: number;
+  maxEntryRatio: number;
+  nestedArchiveCount: number;
+  nestedArchiveRatio: number;
+  maxPathDepth: number;
+  suspiciousEntries: ZipBombEntryFlag[];
+  details: string[];
+}
+
+export interface PolyglotIndicator {
+  id: string;
+  label: string;
+  offset: number;
+  detail: string;
+  severity: "warning" | "danger";
+}
+
+export interface PolyglotResult {
+  indicators: PolyglotIndicator[];
+}
+
+export interface OfficeMacroCheck {
+  detected: boolean;
+  confidence: "high" | "low";
+  source: string;
+}
+
+export interface EntropyRegionResult {
+  windowSize: number;
+  maxWindowEntropy: number;
+  highEntropyRegions: { offsetStart: number; offsetEnd: number; entropy: number }[];
+  suspicious: boolean;
+}
+
 export interface RgbHistogram {
   r: number[];
   g: number[];
@@ -144,6 +194,10 @@ export interface ForensicResult {
   imageAnalysis?: ImageAnalysis;
   ela?: import("./forensic-ela").ElaResult;
   corruption?: CorruptionCheck;
+  zipBomb?: ZipBombCheck;
+  polyglot?: PolyglotResult;
+  officeMacros?: OfficeMacroCheck;
+  entropyRegions?: EntropyRegionResult;
   privacyScore?: number;
   flags?: ForensicFlag[];
   error?: string;

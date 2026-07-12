@@ -21,14 +21,16 @@ import {
 import FileDropzone from "@/components/file-dropzone";
 import { Spinner } from "@/components/spinner";
 import { formatBytes, cn } from "@/lib/utils";
-import type { ForensicResult, ForensicFlag, CorruptionCheck } from "./forensic-types";
-import { computeBasicInfo, extractStrings } from "./forensic-engine";
+import type { ForensicResult, ForensicFlag, CorruptionCheck, ZipBombCheck } from "./forensic-types";
+import { computeBasicInfo, extractStrings, analyzeEntropyRegions } from "./forensic-engine";
 import { extractExif, analyzeImage } from "./forensic-exif";
 import { extractPdfMeta } from "./forensic-pdf";
 import { extractOfficeMeta } from "./forensic-office";
 import { extractMediaMeta } from "./forensic-media";
 import { listZipEntries } from "./forensic-zip";
 import { checkCorruption } from "./forensic-corruption";
+import { analyzeZipBomb } from "./forensic-zipbomb";
+import { scanEmbeddedExecutables, detectOfficeMacros } from "./forensic-threat";
 import { computeEla } from "./forensic-ela";
 import type { ElaResult } from "./forensic-ela";
 import { CompareView } from "./compare-view";
@@ -137,7 +139,7 @@ function formatTimeRange(ms: number): string {
 
 function buildFlags(result: ForensicResult): ForensicFlag[] {
   const flags: ForensicFlag[] = [];
-  const { basic, exif, pdfMeta, officeMeta, imageAnalysis, corruption } = result;
+  const { basic, exif, pdfMeta, officeMeta, imageAnalysis, corruption, zipBomb, polyglot, officeMacros, entropyRegions } = result;
 
   flags.push({
     id: "corrupted",
@@ -217,11 +219,67 @@ function buildFlags(result: ForensicResult): ForensicFlag[] {
   });
 
   flags.push({
-    id: "sig_mismatch",
-    label: "Assinatura de arquivo incompatível",
-    description: "Os magic bytes não correspondem à extensão declarada — possível disfarce de tipo.",
+    id: "sig_mime_mismatch",
+    label: "Assinatura de arquivo incompatível com o MIME",
+    description: "Os magic bytes não correspondem ao tipo MIME declarado pelo navegador — possível disfarce de tipo.",
     severity: "warning",
     active: basic?.signature.match === false && basic.signature.detectedType !== "Unknown",
+  });
+
+  flags.push({
+    id: "sig_ext_mismatch",
+    label: "Assinatura de arquivo incompatível com a extensão",
+    description: "Os magic bytes indicam um tipo (ex.: executável) que não é compatível com a extensão do arquivo — ex.: um .exe renomeado para .jpg.",
+    severity: "danger",
+    active: basic?.signature.extensionMatch === false && basic.signature.detectedType !== "Unknown",
+  });
+
+  flags.push({
+    id: "zipbomb_warning",
+    label: "Padrão suspeito de compressão",
+    description: "A razão entre tamanho descomprimido e comprimido está acima do normal — pode indicar um zip bomb.",
+    severity: "warning",
+    active: zipBomb?.severity === "warning",
+  });
+
+  flags.push({
+    id: "zipbomb_danger",
+    label: "Possível zip bomb",
+    description: "Padrões extremos de compressão, contagem de entradas ou arquivos aninhados foram detectados — extrair este arquivo é arriscado.",
+    severity: "danger",
+    active: zipBomb?.severity === "danger",
+  });
+
+  flags.push({
+    id: "embedded_executable",
+    label: "Assinatura de executável embutida",
+    description: "Foram encontrados bytes de assinatura de um executável (PE/ELF/Mach-O) dentro de um arquivo que não deveria contê-los — possível polyglot ou payload oculto.",
+    severity: "danger",
+    active: (polyglot?.indicators.some(i => i.severity === "danger") ?? false),
+  });
+
+  flags.push({
+    id: "sfx_polyglot",
+    label: "Dados antes da estrutura ZIP (SFX/polyglot)",
+    description: "O arquivo contém uma estrutura ZIP válida que não começa no início do arquivo — padrão de autoextraível (SFX) ou polyglot.",
+    severity: "warning",
+    active: (polyglot?.indicators.some(i => i.id === "zip_prepended_data") ?? false),
+  });
+
+  flags.push({
+    id: "macros",
+    label: "Macros (VBA) detectadas",
+    description: "O documento Office contém um projeto de macro VBA — macros podem executar código automaticamente ao abrir o arquivo.",
+    severity: "warning",
+    active: !!officeMacros?.detected,
+  });
+
+  flags.push({
+    id: "entropy_region",
+    label: "Região de alta entropia isolada",
+    description: "Uma região localizada do arquivo tem entropia muito alta enquanto o restante é normal — possível payload cifrado/empacotado escondido.",
+    severity: "warning",
+    active: !!entropyRegions?.suspicious,
   });
 
   flags.push({
@@ -304,18 +362,31 @@ async function processFile(
   if (isMedia(file)) {
     tasks.push(extractMediaMeta(file, buffer).then((m) => { mediaMeta = m; }).catch(() => {}));
   }
+  // Office Open XML files (docx/xlsx/pptx) are ZIPs under the hood and are just
+  // as capable of embedding a bomb/macro entry, so parse their central directory too.
   if (isZip(file) || isOffice(file)) {
-    tasks.push(Promise.resolve().then(() => { zipEntries = isZip(file) ? listZipEntries(u8) : undefined; }));
+    tasks.push(Promise.resolve().then(() => { zipEntries = listZipEntries(u8); }));
   }
 
   tasks.push(checkCorruption(file, u8).then((c) => { corruption = c; }).catch(() => {}));
 
   await Promise.allSettled(tasks);
 
-  const partial: ForensicResult = { file, basic, strings, exif, pdfMeta, officeMeta, mediaMeta, zipEntries, imageAnalysis, corruption, status: "processing" };
+  const zipBomb = zipEntries ? analyzeZipBomb(zipEntries, file.size) : undefined;
+  const polyglot = scanEmbeddedExecutables(u8, basic.signature.detectedType);
+  const entropyRegions = analyzeEntropyRegions(u8, basic.entropy);
+  const officeMacros = detectOfficeMacros(zipEntries, file.name, strings);
+
+  const partial: ForensicResult = {
+    file, basic, strings, exif, pdfMeta, officeMeta, mediaMeta, zipEntries, imageAnalysis, corruption,
+    zipBomb, polyglot, officeMacros, entropyRegions, status: "processing",
+  };
   const privacyScore = buildPrivacyScore(partial);
   const flags = buildFlags(partial);
-  onProgress({ exif, pdfMeta, officeMeta, mediaMeta, zipEntries, imageAnalysis, corruption, privacyScore, flags, status: "done" });
+  onProgress({
+    exif, pdfMeta, officeMeta, mediaMeta, zipEntries, imageAnalysis, corruption,
+    zipBomb, polyglot, officeMacros, entropyRegions, privacyScore, flags, status: "done",
+  });
 }
 
 // ─── UI helpers ───────────────────────────────────────────────────────────────
@@ -363,6 +434,18 @@ const CORRUPTION_CONFIG: Record<CorruptionCheck["status"], { label: string; clas
 function CorruptionBadge({ status }: { status: CorruptionCheck["status"] }) {
   const cfg = CORRUPTION_CONFIG[status];
   if (status === "corrupted") return <Badge variant="destructive">{cfg.label}</Badge>;
+  return <Badge variant="outline" className={cfg.className}>{cfg.label}</Badge>;
+}
+
+const ZIPBOMB_CONFIG: Record<ZipBombCheck["severity"], { label: string; className: string }> = {
+  ok:      { label: "Sem indícios",  className: "bg-green-600 text-white hover:bg-green-600" },
+  warning: { label: "Suspeito",      className: "bg-yellow-500 text-white hover:bg-yellow-500" },
+  danger:  { label: "Zip bomb provável", className: "" },
+};
+
+function ZipBombBadge({ severity }: { severity: ZipBombCheck["severity"] }) {
+  const cfg = ZIPBOMB_CONFIG[severity];
+  if (severity === "danger") return <Badge variant="destructive">{cfg.label}</Badge>;
   return <Badge variant="outline" className={cfg.className}>{cfg.label}</Badge>;
 }
 
@@ -480,7 +563,8 @@ function TabGeral({ result }: { result: ForensicResult }) {
 // ─── Tab: Metadados ───────────────────────────────────────────────────────────
 
 function TabMetadata({ result }: { result: ForensicResult }) {
-  const { exif, pdfMeta, officeMeta, mediaMeta, zipEntries, file } = result;
+  const { exif, pdfMeta, officeMeta, mediaMeta, zipEntries, zipBomb, officeMacros, file } = result;
+  const suspiciousByName = new Map((zipBomb?.suspiciousEntries ?? []).map(s => [s.name, s]));
   const imageUrl = useObjectURL(file && isImage(file) ? file : undefined);
   const [elaResult, setElaResult] = useState<ElaResult | null>(null);
   const [elaLoading, setElaLoading] = useState(false);
@@ -650,6 +734,14 @@ function TabMetadata({ result }: { result: ForensicResult }) {
           <Row label="Modificado em" value={officeMeta.modified} />
           <Row label="Descrição" value={officeMeta.description} />
           <Row label="Palavras-chave" value={officeMeta.keywords} />
+          {officeMacros?.detected && (
+            <div className="flex items-center gap-1 py-2">
+              <span className="text-muted-foreground text-xs font-medium w-40 shrink-0">Macros</span>
+              <Badge variant="destructive" className="text-xs" title={officeMacros.source}>
+                Contém macros VBA {officeMacros.confidence === "low" ? "(indício)" : ""}
+              </Badge>
+            </div>
+          )}
         </>
       )}
 
@@ -703,15 +795,27 @@ function TabMetadata({ result }: { result: ForensicResult }) {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {zipEntries.slice(0, 200).map((e, i) => (
-                  <TableRow key={i}>
-                    <TableCell className="text-xs font-mono max-w-48 truncate">{e.name}</TableCell>
-                    <TableCell className="text-xs text-right">{formatBytes(e.size)}</TableCell>
-                    <TableCell className="text-xs text-right">{formatBytes(e.compressedSize)}</TableCell>
-                    <TableCell className="text-xs">{e.method === 0 ? "Stored" : e.method === 8 ? "Deflate" : String(e.method)}</TableCell>
-                    <TableCell className="text-xs">{e.date}</TableCell>
-                  </TableRow>
-                ))}
+                {zipEntries.slice(0, 200).map((e, i) => {
+                  const suspicious = suspiciousByName.get(e.name);
+                  return (
+                    <TableRow key={i} className={suspicious ? "bg-destructive/5" : undefined}>
+                      <TableCell className="text-xs font-mono max-w-48 truncate">
+                        <span className="flex items-center gap-1.5">
+                          {e.name}
+                          {suspicious && (
+                            <Badge variant="destructive" className="text-[10px] px-1 py-0 shrink-0">
+                              ⚠ {suspicious.ratio === Infinity ? "∞" : `${Math.round(suspicious.ratio).toLocaleString("pt-BR")}:1`}
+                            </Badge>
+                          )}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-xs text-right">{formatBytes(e.size)}</TableCell>
+                      <TableCell className="text-xs text-right">{formatBytes(e.compressedSize)}</TableCell>
+                      <TableCell className="text-xs">{e.method === 0 ? "Stored" : e.method === 8 ? "Deflate" : String(e.method)}</TableCell>
+                      <TableCell className="text-xs">{e.date}</TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           </div>
@@ -858,7 +962,7 @@ function TabTimeline({ result }: { result: ForensicResult }) {
 // ─── Tab: Forense ─────────────────────────────────────────────────────────────
 
 function TabForensic({ result }: { result: ForensicResult }) {
-  const { privacyScore = 0, flags = [], imageAnalysis, corruption } = result;
+  const { privacyScore = 0, flags = [], imageAnalysis, corruption, zipBomb } = result;
   const activeFlags = flags.filter(f => f.active);
 
   return (
@@ -878,6 +982,33 @@ function TabForensic({ result }: { result: ForensicResult }) {
             {corruption.details.map((d, i) => (
               <li key={i} className="flex items-start gap-1.5 text-xs text-muted-foreground">
                 <span className="mt-0.5 shrink-0">{corruption.status === "ok" ? "✓" : "•"}</span>
+                <span>{d}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {zipBomb && (
+        <div className={cn(
+          "rounded-lg border p-3 space-y-2",
+          zipBomb.severity === "danger"  && "border-destructive/60 bg-destructive/5",
+          zipBomb.severity === "warning" && "border-yellow-500/60 bg-yellow-500/5",
+          zipBomb.severity === "ok"      && "border-green-600/40 bg-green-600/5",
+        )}>
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-semibold">Detector de Zip Bomb</span>
+            <ZipBombBadge severity={zipBomb.severity} />
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            <Badge variant="outline" className="text-[10px]">{zipBomb.entryCount.toLocaleString("pt-BR")} entradas</Badge>
+            <Badge variant="outline" className="text-[10px]">razão máx. {zipBomb.maxEntryRatio === Infinity ? "∞" : `${Math.round(zipBomb.maxEntryRatio).toLocaleString("pt-BR")}:1`}</Badge>
+            <Badge variant="outline" className="text-[10px]">total descomprimido {formatBytes(zipBomb.totalUncompressedSize)}</Badge>
+          </div>
+          <ul className="space-y-1">
+            {zipBomb.details.map((d, i) => (
+              <li key={i} className="flex items-start gap-1.5 text-xs text-muted-foreground">
+                <span className="mt-0.5 shrink-0">{zipBomb.severity === "ok" ? "✓" : "•"}</span>
                 <span>{d}</span>
               </li>
             ))}
@@ -993,6 +1124,10 @@ export default function ForenseClient() {
       officeMeta: result.officeMeta,
       mediaMeta: result.mediaMeta ? { ...result.mediaMeta, id3: result.mediaMeta.id3 ? { ...result.mediaMeta.id3, coverUrl: undefined } : undefined } : undefined,
       zipEntries: result.zipEntries,
+      zipBomb: result.zipBomb,
+      polyglot: result.polyglot,
+      officeMacros: result.officeMacros,
+      entropyRegions: result.entropyRegions,
       privacyScore: result.privacyScore,
       flags: result.flags,
     };
@@ -1015,6 +1150,10 @@ export default function ForenseClient() {
       officeMeta: result.officeMeta,
       mediaMeta: result.mediaMeta ? { ...result.mediaMeta, id3: result.mediaMeta.id3 ? { ...result.mediaMeta.id3, coverUrl: undefined } : undefined } : undefined,
       zipEntries: result.zipEntries,
+      zipBomb: result.zipBomb,
+      polyglot: result.polyglot,
+      officeMacros: result.officeMacros,
+      entropyRegions: result.entropyRegions,
       privacyScore: result.privacyScore,
       flags: result.flags,
     };
