@@ -60,22 +60,8 @@ export default function MaquinaDoTempoClient() {
         lastDeparture={lastDeparture}
         onEngage={engage}
         disabled={busy}
+        statusText={phase === "sequencing" ? SEQUENCE_MESSAGES[statusIndex] : undefined}
       />
-
-      {phase === "sequencing" && (
-        <div className="w-full max-w-2xl mx-auto flex flex-col gap-2">
-          <p className="text-center text-xs font-mono text-emerald-400/80">{SEQUENCE_MESSAGES[statusIndex]}</p>
-          <div className="h-1.5 w-full rounded-full bg-zinc-800 overflow-hidden">
-            <div
-              className="h-full bg-emerald-500 transition-all"
-              style={{
-                width: `${((statusIndex + 1) / SEQUENCE_MESSAGES.length) * 100}%`,
-                transitionDuration: `${SEQUENCE_STEP_MS}ms`,
-              }}
-            />
-          </div>
-        </div>
-      )}
 
       {(phase === "glitching" || phase === "error") && (
         <GlitchError phase={phase} destination={destination} lat={lat} lon={lon} onReset={reset} />

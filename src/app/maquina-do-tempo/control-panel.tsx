@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/spinner";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { NOTHING_HAPPENED_MESSAGES, randomFrom } from "./status-messages";
@@ -47,10 +48,11 @@ interface ControlPanelProps {
   lastDeparture: Date | null;
   onEngage: () => void;
   disabled: boolean;
+  statusText?: string;
 }
 
 export function ControlPanel({
-  destination, onDestinationChange, lat, lon, onLatChange, onLonChange, lastDeparture, onEngage, disabled,
+  destination, onDestinationChange, lat, lon, onLatChange, onLonChange, lastDeparture, onEngage, disabled, statusText,
 }: ControlPanelProps) {
   const [now, setNow] = useState<Date | null>(null);
   const [switches, setSwitches] = useState<Record<string, boolean>>({});
@@ -162,7 +164,14 @@ export function ControlPanel({
         disabled={disabled || !destination}
         className="w-full h-14 text-base font-bold bg-red-600 hover:bg-red-500 text-white shadow-[0_0_30px_rgba(220,38,38,0.5)] disabled:opacity-40 disabled:shadow-none"
       >
-        ATIVAR
+        {statusText ? (
+          <>
+            <Spinner className="size-4" />
+            {statusText}
+          </>
+        ) : (
+          "ATIVAR"
+        )}
       </Button>
     </div>
   );
