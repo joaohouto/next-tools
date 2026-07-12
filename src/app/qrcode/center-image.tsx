@@ -53,8 +53,8 @@ export function iconToDataUri(Icon: PhosphorIcon, weight: IconWeight, fgColor: s
   const svg = renderToStaticMarkup(
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48">
       <circle cx={24} cy={24} r={24} fill={bgColor} />
-      <g transform="translate(12, 12)">
-        <Icon color={fgColor} weight={weight} size={24} />
+      <g transform="translate(6, 6)">
+        <Icon color={fgColor} weight={weight} size={36} />
       </g>
     </svg>,
   );
