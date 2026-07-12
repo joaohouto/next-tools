@@ -18,7 +18,6 @@ import {
   Images,
   MapPin,
   Regex,
-  BookOpen,
 } from "lucide-react";
 
 import type { ToolUsageRecord } from "@/hooks/use-tool-usage";
@@ -111,13 +110,6 @@ export const UNORDERED_LIST = [
     description: "Analise metadados, hash e propriedades ocultas de qualquer arquivo.",
     path: "/forense",
     icon: <ScanSearch />,
-    category: "Arquivos" as PageCategory,
-  },
-  {
-    title: "EPUB/PDF",
-    description: "Converta e-books EPUB em PDF e vice-versa direto no navegador.",
-    path: "/epub",
-    icon: <BookOpen />,
     category: "Arquivos" as PageCategory,
   },
 
