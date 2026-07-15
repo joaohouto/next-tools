@@ -293,6 +293,57 @@ const exportQRCodeSVG = async (
   }
 };
 
+// Removes the Tailwind `class` attribute (only meaningful inside this app's
+// stylesheet) so standalone SVG exports don't carry dead references.
+const cleanSvgClone = (svg: SVGSVGElement): SVGSVGElement => {
+  const clone = svg.cloneNode(true) as SVGSVGElement;
+  clone.removeAttribute("class");
+  clone.querySelectorAll("[class]").forEach((el) => el.removeAttribute("class"));
+  return clone;
+};
+
+export const copySvgElement = async (svg: SVGSVGElement | null): Promise<void> => {
+  if (!svg) {
+    toast.error("Erro ao copiar imagem!");
+    return;
+  }
+
+  try {
+    const svgString = new XMLSerializer().serializeToString(cleanSvgClone(svg));
+    const blob = new Blob([svgString], { type: "image/svg+xml" });
+    await navigator.clipboard.write([
+      new ClipboardItem({ "image/svg+xml": blob }),
+    ]);
+    toast.success("Imagem copiada!");
+  } catch (err) {
+    toast.error("Erro ao copiar imagem!");
+    console.error("Erro ao copiar SVG:", err);
+  }
+};
+
+export const exportSvgElement = (
+  svg: SVGSVGElement | null,
+  imageFileName: string,
+): void => {
+  if (!svg) {
+    toast.error("Erro ao exportar imagem!");
+    return;
+  }
+
+  try {
+    const svgString = new XMLSerializer().serializeToString(cleanSvgClone(svg));
+    const blob = new Blob([svgString], { type: "image/svg+xml" });
+    const url = URL.createObjectURL(blob);
+    downloadImage(url, `${clearFileName(imageFileName)}.svg`);
+    toast.success("Imagem exportada!");
+
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  } catch (err) {
+    toast.error("Erro ao exportar imagem!");
+    console.error("Erro ao exportar SVG:", err);
+  }
+};
+
 const downloadImage = (blob: string, fileName: string): void => {
   const fakeLink = document.createElement("a");
   fakeLink.style.display = "none";

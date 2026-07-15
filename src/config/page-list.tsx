@@ -19,6 +19,7 @@ import {
   MapPin,
   Regex,
   Zap,
+  Orbit,
 } from "lucide-react";
 
 import type { ToolUsageRecord } from "@/hooks/use-tool-usage";
@@ -81,6 +82,14 @@ export const UNORDERED_LIST = [
       "Gere folhas pautadas personalizadas com espaçamento e margens configuráveis.",
     path: "/line-sheet",
     icon: <NotebookPen />,
+    category: "Geradores" as PageCategory,
+  },
+  {
+    title: "Texto Circular",
+    description:
+      "Gere textos em formato circular com fontes do Google Fonts e exporte como SVG vetorial.",
+    path: "/circular-text",
+    icon: <Orbit />,
     category: "Geradores" as PageCategory,
   },
 
