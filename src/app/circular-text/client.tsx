@@ -24,6 +24,16 @@ const DEFAULT_CONFIG: CircularTextConfig = {
   unit: "px",
 };
 
+function normalizeText(text: string): string {
+  return text
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, "")
+    .trim()
+    .replace(/\s+/g, "-");
+}
+
 export default function Page() {
   const [config, setConfig] = useState<CircularTextConfig>(DEFAULT_CONFIG);
   const [overflowWarning, setOverflowWarning] = useState(false);
@@ -64,7 +74,9 @@ export default function Page() {
           </Button>
           <Button
             size="sm"
-            onClick={() => exportSvgElement(svgRef.current, "texto-circular")}
+            onClick={() =>
+              exportSvgElement(svgRef.current, normalizeText(config.text))
+            }
           >
             <DownloadIcon className="size-3.5" />
             Baixar SVG

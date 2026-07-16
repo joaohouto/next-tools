@@ -310,10 +310,12 @@ export const copySvgElement = async (svg: SVGSVGElement | null): Promise<void> =
 
   try {
     const svgString = new XMLSerializer().serializeToString(cleanSvgClone(svg));
-    const blob = new Blob([svgString], { type: "image/svg+xml" });
-    await navigator.clipboard.write([
-      new ClipboardItem({ "image/svg+xml": blob }),
-    ]);
+    // `ClipboardItem` with an "image/svg+xml" entry isn't reliably supported
+    // across browsers (Chrome only guarantees text/plain, text/html and
+    // image/png for clipboard.write). Writing it as plain text is what makes
+    // it paste as real text in editors — and Figma/Illustrator both auto-detect
+    // pasted SVG markup and import it as a vector, same as copyQRCodeSVG below.
+    await navigator.clipboard.writeText(svgString);
     toast.success("Imagem copiada!");
   } catch (err) {
     toast.error("Erro ao copiar imagem!");
