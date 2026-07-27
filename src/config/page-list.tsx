@@ -20,6 +20,7 @@ import {
   Regex,
   Zap,
   Orbit,
+  Film,
 } from "lucide-react";
 
 import type { ToolUsageRecord } from "@/hooks/use-tool-usage";
@@ -108,6 +109,14 @@ export const UNORDERED_LIST = [
       "Mescle, divida, organize, comprima e converta arquivos PDF sem upload.",
     path: "/pdf",
     icon: <FileText />,
+    category: "Arquivos" as PageCategory,
+  },
+  {
+    title: "Quadros",
+    description:
+      "Extraia quadros de um vídeo pela timeline, adicione legendas e exporte em PDF ou imagem única.",
+    path: "/frames",
+    icon: <Film />,
     category: "Arquivos" as PageCategory,
   },
   {
