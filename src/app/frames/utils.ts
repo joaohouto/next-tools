@@ -1,3 +1,5 @@
+import type { CropRect } from "./types";
+
 // ─── frame-extractor helpers ──────────────────────────────────────────────────
 
 /**
@@ -56,7 +58,93 @@ export function rulerStep(duration: number, width: number): number {
   return steps.find((s) => duration / s <= maxTicks) ?? steps[steps.length - 1];
 }
 
+// ─── crop geometry ────────────────────────────────────────────────────────────
+
+/** No crop: the whole frame. Used as the identity value so one code path fits both. */
+export const FULL_CROP: CropRect = { x: 0, y: 0, width: 1, height: 1 };
+
+/** Display aspect of a cropped frame, given the source's intrinsic size. */
+export function cropAspect(crop: CropRect, width: number, height: number) {
+  const aspect = (width * crop.width) / (height * crop.height);
+  return Number.isFinite(aspect) && aspect > 0 ? aspect : 16 / 9;
+}
+
 // ─── video element plumbing ───────────────────────────────────────────────────
+
+export interface FrameMeta {
+  /** Presentation timestamp of the frame actually on screen. */
+  mediaTime: number;
+}
+
+export type VideoWithFrameCallback = HTMLVideoElement & {
+  requestVideoFrameCallback: (cb: (now: number, meta: FrameMeta) => void) => number;
+  cancelVideoFrameCallback: (handle: number) => void;
+};
+
+/**
+ * `requestVideoFrameCallback` is the only way to learn which frame is really on
+ * screen — `currentTime` just echoes back whatever was assigned to it. Works on
+ * detached elements too, which is what lets the fps probe run out of sight.
+ */
+export function withFrameCallback(video: HTMLVideoElement): VideoWithFrameCallback | null {
+  const candidate = video as Partial<VideoWithFrameCallback>;
+  return typeof candidate.requestVideoFrameCallback === "function"
+    ? (video as VideoWithFrameCallback)
+    : null;
+}
+
+/** Rates worth snapping to, so a noisy measurement still reports "30" and not "29.97…". */
+const COMMON_FPS = [23.976, 24, 25, 29.97, 30, 48, 50, 59.94, 60, 90, 100, 120];
+
+/**
+ * Measures the real frame rate from a brief muted playback burst.
+ * Meant for the off-screen capture element — playing the visible player would
+ * flash the video at the user for no reason.
+ */
+export async function detectFps(video: HTMLVideoElement, fallback = 30): Promise<number> {
+  const target = withFrameCallback(video);
+  if (!target) return fallback;
+
+  const startTime = video.currentTime;
+  video.muted = true;
+  if (startTime > Math.max(0, video.duration - 1)) video.currentTime = 0;
+
+  try {
+    await video.play();
+  } catch {
+    return fallback;
+  }
+
+  const deltas = await new Promise<number[]>((resolve) => {
+    const samples: number[] = [];
+    let previous: number | null = null;
+    const timer = setTimeout(() => resolve(samples), 2500);
+
+    const onFrame = (_: number, meta: FrameMeta) => {
+      if (previous !== null) {
+        const delta = meta.mediaTime - previous;
+        if (delta > 0.001 && delta < 0.5) samples.push(delta);
+      }
+      previous = meta.mediaTime;
+      if (samples.length >= 12) {
+        clearTimeout(timer);
+        resolve(samples);
+        return;
+      }
+      target.requestVideoFrameCallback(onFrame);
+    };
+    target.requestVideoFrameCallback(onFrame);
+  });
+
+  video.pause();
+  video.currentTime = startTime;
+
+  if (deltas.length < 4) return fallback;
+  const sorted = [...deltas].sort((a, b) => a - b);
+  const raw = 1 / sorted[Math.floor(sorted.length / 2)];
+  const snapped = COMMON_FPS.find((rate) => Math.abs(rate - raw) / rate < 0.04);
+  return snapped ?? Math.round(raw * 100) / 100;
+}
 
 /** Loads an off-screen `<video>` and resolves once its metadata is known. */
 export function loadVideo(url: string, timeoutMs = 15000): Promise<HTMLVideoElement> {
@@ -95,49 +183,71 @@ export function loadVideo(url: string, timeoutMs = 15000): Promise<HTMLVideoElem
   });
 }
 
-/** Seeks and waits until the frame at `time` is actually available for drawing. */
-export function seekTo(video: HTMLVideoElement, time: number, timeoutMs = 10000): Promise<void> {
+/**
+ * Seeks and waits until the frame at `time` is actually available for drawing.
+ * Resolves with the presented frame's true timestamp when the browser exposes
+ * it — that value, not the requested one, is what gets printed on the export.
+ */
+export function seekTo(
+  video: HTMLVideoElement,
+  time: number,
+  timeoutMs = 10000,
+): Promise<number | null> {
   const target = clamp(time, 0, Math.max(0, video.duration - 0.001));
+  const withCallback = withFrameCallback(video);
 
   return new Promise((resolve, reject) => {
-    const settle = () => {
+    let done = false;
+    let guard: ReturnType<typeof setTimeout> | undefined;
+
+    const cleanup = () => {
+      clearTimeout(timer);
+      clearTimeout(guard);
+      video.removeEventListener("seeked", onSeeked);
+      video.removeEventListener("error", onError);
+    };
+    const finish = (presented: number | null) => {
+      if (done) return;
+      done = true;
       cleanup();
-      // `seeked` guarantees the frame is decoded, but a paint tick makes
-      // drawImage reliable across browsers that lag one frame behind.
-      const rvfc = (
-        video as HTMLVideoElement & {
-          requestVideoFrameCallback?: (cb: () => void) => number;
-        }
-      ).requestVideoFrameCallback;
-      if (typeof rvfc === "function") {
-        const guard = setTimeout(resolve, 300);
-        rvfc.call(video, () => {
-          clearTimeout(guard);
-          resolve();
-        });
-      } else {
-        requestAnimationFrame(() => resolve());
+      resolve(presented);
+    };
+    const onSeeked = () => {
+      // `seeked` means decoded; the frame callback below is what tells us which
+      // frame that actually is. Without it, a paint tick is enough for drawImage.
+      if (!withCallback) {
+        requestAnimationFrame(() => finish(null));
+        return;
       }
+      guard = setTimeout(() => finish(null), 300);
     };
     const onError = () => {
+      if (done) return;
+      done = true;
       cleanup();
       reject(new Error("seek-failed"));
     };
-    const cleanup = () => {
-      clearTimeout(timer);
-      video.removeEventListener("seeked", settle);
-      video.removeEventListener("error", onError);
-    };
     const timer = setTimeout(() => {
+      if (done) return;
+      done = true;
       cleanup();
       reject(new Error("seek-timeout"));
     }, timeoutMs);
 
-    video.addEventListener("seeked", settle);
+    video.addEventListener("seeked", onSeeked);
     video.addEventListener("error", onError);
 
-    if (Math.abs(video.currentTime - target) < 1e-4 && video.readyState >= 2) {
-      settle();
+    // Registered *before* the seek on purpose: the callback fires for the frame
+    // this seek presents, and registering it after `seeked` misses that
+    // presentation entirely — which used to leave every capture waiting out the
+    // 300 ms guard and falling back to the requested time instead of the real one.
+    if (withCallback) {
+      withCallback.requestVideoFrameCallback((_, meta) => finish(meta.mediaTime));
+    }
+
+    if (Math.abs(video.currentTime - target) < 1e-6 && video.readyState >= 2) {
+      // Assigning the same value doesn't seek, so nothing new will be presented.
+      finish(null);
       return;
     }
     video.currentTime = target;
@@ -160,7 +270,7 @@ export async function captureAt(
   maxWidth?: number,
   quality = 0.9,
 ): Promise<Capture> {
-  await seekTo(video, time);
+  const presented = await seekTo(video, time);
 
   const scale = maxWidth ? Math.min(1, maxWidth / video.videoWidth) : 1;
   const canvas = document.createElement("canvas");
@@ -170,7 +280,10 @@ export async function captureAt(
   const ctx = canvas.getContext("2d")!;
   ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-  return { dataUrl: canvas.toDataURL("image/jpeg", quality), time: video.currentTime };
+  return {
+    dataUrl: canvas.toDataURL("image/jpeg", quality),
+    time: presented ?? video.currentTime,
+  };
 }
 
 /**

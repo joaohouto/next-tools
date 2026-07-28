@@ -1,7 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { captureAt, loadVideo, type Capture } from "./utils";
+import { captureAt, detectFps, loadVideo, type Capture } from "./utils";
+
+const DEFAULT_FPS = 30;
 
 export type CaptureFn = (
   time: number,
@@ -21,16 +23,23 @@ export function useCapture(url: string | null) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const queueRef = useRef<Promise<unknown>>(Promise.resolve());
   const [ready, setReady] = useState(false);
+  const [fps, setFps] = useState(DEFAULT_FPS);
 
   useEffect(() => {
     setReady(false);
+    setFps(DEFAULT_FPS);
     videoRef.current = null;
     if (!url) return;
 
     let cancelled = false;
     loadVideo(url)
-      .then((video) => {
+      .then(async (video) => {
         if (cancelled) return;
+        // Probed before the element goes live so the filmstrip and the fps
+        // burst never fight over the same seek head.
+        const measured = await detectFps(video, DEFAULT_FPS);
+        if (cancelled) return;
+        setFps(measured);
         videoRef.current = video;
         setReady(true);
       })
@@ -60,5 +69,5 @@ export function useCapture(url: string | null) {
     return run;
   }, []);
 
-  return { capture, ready };
+  return { capture, ready, fps };
 }

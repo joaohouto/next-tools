@@ -1,5 +1,5 @@
-import type { ExportSettings, Frame } from "./types";
-import { formatClock, formatTimecode } from "./utils";
+import type { CropRect, ExportSettings, Frame } from "./types";
+import { cropAspect, formatClock, formatTimecode, FULL_CROP } from "./utils";
 
 /**
  * Canvas is the single renderer for both outputs: the PNG *is* a sheet, and the
@@ -33,6 +33,8 @@ const PLACEHOLDER = "#f3f4f6";
 export interface SheetContext {
   videoName: string;
   duration: number;
+  /** Region of each frame to print. Frames are always captured whole. */
+  crop?: CropRect | null;
 }
 
 export type GetImage = (frame: Frame) => Promise<HTMLImageElement>;
@@ -102,6 +104,7 @@ export async function renderSheets(
   }
 
   const { sans, mono } = fontStacks();
+  const crop = context.crop ?? FULL_CROP;
   const columns = settings.columns;
   const contentW = SHEET_W - MARGIN * 2;
   const cellW = (contentW - GUTTER * (columns - 1)) / columns;
@@ -124,7 +127,7 @@ export async function renderSheets(
 
   const cells: Cell[] = frames.map((frame, index) => {
     const image = images[index];
-    const aspect = image.naturalWidth / image.naturalHeight || 16 / 9;
+    const aspect = cropAspect(crop, image.naturalWidth, image.naturalHeight);
 
     measure.font = `400 ${CAPTION_SIZE}px ${sans}`;
     const captionLines =
@@ -223,12 +226,23 @@ export async function renderSheets(
         ctx.fillStyle = PLACEHOLDER;
         ctx.fill();
         ctx.clip();
-        // `cover` the cell so mixed aspect ratios still line up in the grid.
-        const aspect = cell.image.naturalWidth / cell.image.naturalHeight || 16 / 9;
+        // Only the cropped region is drawn, `cover`ing the cell so a page break
+        // that shortened this row still fills it instead of letterboxing.
+        const source = {
+          x: cell.image.naturalWidth * crop.x,
+          y: cell.image.naturalHeight * crop.y,
+          width: cell.image.naturalWidth * crop.width,
+          height: cell.image.naturalHeight * crop.height,
+        };
+        const aspect = cropAspect(crop, cell.image.naturalWidth, cell.image.naturalHeight);
         const drawW = Math.max(cellW, cell.imageHeight * aspect);
         const drawH = drawW / aspect;
         ctx.drawImage(
           cell.image,
+          source.x,
+          source.y,
+          source.width,
+          source.height,
           x + (cellW - drawW) / 2,
           cellY + (cell.imageHeight - drawH) / 2,
           drawW,

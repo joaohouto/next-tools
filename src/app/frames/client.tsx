@@ -9,7 +9,7 @@ import { Progress } from "@/components/ui/progress";
 import { Spinner } from "@/components/spinner";
 import { cn } from "@/lib/utils";
 
-import type { Frame, PrepareProgress, VideoSource } from "./types";
+import type { CropRect, Frame, PrepareProgress, VideoSource } from "./types";
 import { ACCEPTED, fmtBytes, formatClock, isVideo, probePlayable } from "./utils";
 import { useCapture } from "./use-capture";
 import { Editor } from "./views/editor";
@@ -39,9 +39,10 @@ export default function FramesTool() {
 
   const [frames, setFrames] = useState<Frame[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [crop, setCrop] = useState<CropRect | null>(null);
 
   const urlRef = useRef<string | null>(null);
-  const { capture, ready } = useCapture(source?.url ?? null);
+  const { capture, ready, fps } = useCapture(source?.url ?? null);
 
   const releaseUrl = useCallback(() => {
     if (urlRef.current) URL.revokeObjectURL(urlRef.current);
@@ -58,6 +59,7 @@ export default function FramesTool() {
     setError(null);
     setFrames([]);
     setSelectedId(null);
+    setCrop(null);
   }, [releaseUrl]);
 
   const adopt = useCallback(
@@ -264,6 +266,8 @@ export default function FramesTool() {
           source={source}
           frames={frames}
           selectedId={selectedId}
+          crop={crop}
+          fps={fps}
           capture={capture}
           captureReady={ready}
           onSelect={setSelectedId}
@@ -271,6 +275,7 @@ export default function FramesTool() {
           onMove={moveFrame}
           onCommit={commitFrame}
           onRemove={removeFrame}
+          onCrop={setCrop}
         />
 
         <div
@@ -282,6 +287,8 @@ export default function FramesTool() {
           <FrameList
             frames={frames}
             selectedId={selectedId}
+            source={source}
+            crop={crop}
             onSelect={setSelectedId}
             onCaption={setCaption}
             onRemove={removeFrame}
@@ -292,6 +299,7 @@ export default function FramesTool() {
               capture={capture}
               videoName={file?.name ?? "video"}
               duration={source.duration}
+              crop={crop}
             />
           )}
         </div>

@@ -12,11 +12,11 @@ import { Spinner } from "@/components/spinner";
 import { useDebounce } from "@/hooks/use-debounce";
 import { cn } from "@/lib/utils";
 
-import type { Columns, ExportSettings, Frame } from "../types";
+import type { Columns, CropRect, ExportSettings, Frame } from "../types";
 import type { CaptureFn } from "../use-capture";
 import { renderSheets } from "../compose";
 import { exportPdf, exportPng } from "../export";
-import { baseName, loadImage } from "../utils";
+import { baseName, FULL_CROP, loadImage } from "../utils";
 
 /** Enough for a full-width A4 cell at 150 dpi without hoarding memory. */
 const EXPORT_WIDTH = 1400;
@@ -28,9 +28,10 @@ interface ExportPanelProps {
   capture: CaptureFn;
   videoName: string;
   duration: number;
+  crop: CropRect | null;
 }
 
-export function ExportPanel({ frames, capture, videoName, duration }: ExportPanelProps) {
+export function ExportPanel({ frames, capture, videoName, duration, crop }: ExportPanelProps) {
   const [format, setFormat] = useState<Format>("pdf");
   const [settings, setSettings] = useState<Omit<ExportSettings, "paginate">>({
     columns: 2,
@@ -56,24 +57,26 @@ export function ExportPanel({ frames, capture, videoName, duration }: ExportPane
   // ─── live preview (built from the thumbnails, so it stays cheap) ────────────
 
   const signature = useMemo(
-    () => JSON.stringify([full, frames.map((f) => [f.id, f.time, f.caption])]),
-    [full, frames],
+    () => JSON.stringify([full, crop, frames.map((f) => [f.id, f.time, f.caption])]),
+    [full, crop, frames],
   );
   const debounced = useDebounce(signature, 300);
 
-  const stateRef = useRef({ frames, full, videoName, duration });
-  stateRef.current = { frames, full, videoName, duration };
+  const stateRef = useRef({ frames, full, videoName, duration, crop });
+  stateRef.current = { frames, full, videoName, duration, crop };
 
   useEffect(() => {
     let cancelled = false;
     setRendering(true);
 
     (async () => {
-      const { frames: list, full: current, videoName: name, duration: total } = stateRef.current;
+      const { frames: list, full: current, videoName: name, duration: total, crop: area } =
+        stateRef.current;
       try {
         const sheets = await renderSheets(list, current, (frame) => loadImage(frame.thumb), {
           videoName: name,
           duration: total,
+          crop: area,
         });
         if (cancelled) return;
         setPreview(sheets[0]?.toDataURL("image/jpeg", 0.8) ?? null);
@@ -99,17 +102,20 @@ export function ExportPanel({ frames, capture, videoName, duration }: ExportPane
     setExporting(true);
     try {
       // Full-resolution frames are grabbed on demand and reused across sheets.
+      // A crop only keeps a fraction of the width, so the capture is scaled up to
+      // compensate — otherwise a tight zoom would print soft.
+      const captureWidth = Math.round(EXPORT_WIDTH / (crop ?? FULL_CROP).width);
       const cache = new Map<string, string>();
       const getImage = async (frame: Frame) => {
         let source = cache.get(frame.id);
         if (!source) {
-          source = (await capture(frame.time, EXPORT_WIDTH, 0.92)).dataUrl;
+          source = (await capture(frame.time, captureWidth, 0.92)).dataUrl;
           cache.set(frame.id, source);
         }
         return loadImage(source);
       };
 
-      const sheets = await renderSheets(frames, full, getImage, { videoName, duration });
+      const sheets = await renderSheets(frames, full, getImage, { videoName, duration, crop });
       const name = baseName(videoName);
 
       if (format === "pdf") await exportPdf(sheets, `${name}-quadros`);

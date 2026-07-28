@@ -6,18 +6,29 @@ import { Camera, Trash2 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 
-import type { Frame } from "../types";
-import { formatTimecode } from "../utils";
+import type { CropRect, Frame, VideoSource } from "../types";
+import { formatTimecode, FULL_CROP } from "../utils";
+import { CropBox } from "./crop-box";
 
 interface FrameListProps {
   frames: Frame[];
   selectedId: string | null;
+  source: VideoSource;
+  crop: CropRect | null;
   onSelect: (id: string) => void;
   onCaption: (id: string, caption: string) => void;
   onRemove: (id: string) => void;
 }
 
-export function FrameList({ frames, selectedId, onSelect, onCaption, onRemove }: FrameListProps) {
+export function FrameList({
+  frames,
+  selectedId,
+  source,
+  crop,
+  onSelect,
+  onCaption,
+  onRemove,
+}: FrameListProps) {
   if (frames.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center gap-2 py-10 px-6 border border-dashed rounded-xl bg-muted/30 text-center">
@@ -43,6 +54,8 @@ export function FrameList({ frames, selectedId, onSelect, onCaption, onRemove }:
             frame={frame}
             index={index}
             selected={frame.id === selectedId}
+            source={source}
+            crop={crop ?? FULL_CROP}
             onSelect={onSelect}
             onCaption={onCaption}
             onRemove={onRemove}
@@ -57,6 +70,8 @@ function FrameCard({
   frame,
   index,
   selected,
+  source,
+  crop,
   onSelect,
   onCaption,
   onRemove,
@@ -64,6 +79,8 @@ function FrameCard({
   frame: Frame;
   index: number;
   selected: boolean;
+  source: VideoSource;
+  crop: CropRect;
   onSelect: (id: string) => void;
   onCaption: (id: string, caption: string) => void;
   onRemove: (id: string) => void;
@@ -83,13 +100,18 @@ function FrameCard({
         selected ? "border-primary bg-primary/5" : "hover:border-foreground/30 bg-muted/30",
       )}
     >
-      <div className="relative shrink-0">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={frame.thumb}
-          alt={`Quadro ${index + 1}`}
-          className="w-32 sm:w-40 aspect-video object-cover rounded-lg bg-black"
-        />
+      <div className="relative shrink-0 w-32 sm:w-40">
+        {/* Thumbnails are always full frames — the crop is a display transform,
+            so changing it never costs a round of re-captures. */}
+        <CropBox
+          crop={crop}
+          sourceWidth={source.width}
+          sourceHeight={source.height}
+          className="rounded-lg bg-black"
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={frame.thumb} alt={`Quadro ${index + 1}`} />
+        </CropBox>
         <span className="absolute top-1 left-1 px-1.5 rounded bg-black/70 text-white text-[10px] font-medium tabular-nums">
           {index + 1}
         </span>

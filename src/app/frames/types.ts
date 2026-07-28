@@ -28,6 +28,19 @@ export interface PrepareProgress {
   ratio: number;
 }
 
+/**
+ * Region of the source frame to keep, normalized to 0–1 so it survives any
+ * resize. One crop applies to the whole video: it's a framing decision, not a
+ * per-frame edit. Frames are always captured whole — the crop is applied when
+ * drawing, so changing it never costs a re-capture.
+ */
+export interface CropRect {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
 export type Columns = 1 | 2 | 3;
 
 export interface ExportSettings {

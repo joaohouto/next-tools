@@ -2,10 +2,12 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
+import ReactCrop, { type PercentCrop } from "react-image-crop";
 import {
   Camera,
   ChevronFirst,
   ChevronLast,
+  Crop as CropIcon,
   Pause,
   Play,
   SkipBack,
@@ -17,18 +19,33 @@ import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/spinner";
 import { cn } from "@/lib/utils";
 
-import type { Frame, VideoSource } from "../types";
+import type { CropRect, Frame, VideoSource } from "../types";
 import type { CaptureFn } from "../use-capture";
-import { clamp, formatClock, formatTimecode, rulerStep } from "../utils";
+import {
+  clamp,
+  cropAspect,
+  FULL_CROP,
+  formatClock,
+  formatTimecode,
+  rulerStep,
+  seekTo,
+  withFrameCallback,
+} from "../utils";
+import { CropBox } from "./crop-box";
+
+import "react-image-crop/dist/ReactCrop.css";
 
 /** Number of stills painted behind the track. */
 const FILMSTRIP_COUNT = 24;
-const DEFAULT_FPS = 30;
+/** Tallest the player may get, as a CSS length — also drives the crop overlay's box. */
+const PLAYER_MAX_HEIGHT = "52vh";
 
 interface EditorProps {
   source: VideoSource;
   frames: Frame[];
   selectedId: string | null;
+  crop: CropRect | null;
+  fps: number;
   capture: CaptureFn;
   captureReady: boolean;
   onSelect: (id: string | null) => void;
@@ -36,14 +53,32 @@ interface EditorProps {
   onMove: (id: string, time: number) => void;
   onCommit: (id: string, time: number) => void;
   onRemove: (id: string) => void;
+  onCrop: (crop: CropRect | null) => void;
 }
 
 type Drag = { kind: "scrub" } | { kind: "marker"; id: string };
+
+const toRect = (percent: PercentCrop): CropRect => ({
+  x: clamp(percent.x / 100, 0, 1),
+  y: clamp(percent.y / 100, 0, 1),
+  width: clamp(percent.width / 100, 0.02, 1),
+  height: clamp(percent.height / 100, 0.02, 1),
+});
+
+const toPercent = (rect: CropRect): PercentCrop => ({
+  unit: "%",
+  x: rect.x * 100,
+  y: rect.y * 100,
+  width: rect.width * 100,
+  height: rect.height * 100,
+});
 
 export function Editor({
   source,
   frames,
   selectedId,
+  crop,
+  fps,
   capture,
   captureReady,
   onSelect,
@@ -51,14 +86,18 @@ export function Editor({
   onMove,
   onCommit,
   onRemove,
+  onCrop,
 }: EditorProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<Drag | null>(null);
+  /** Timestamp of the frame currently on screen — the anchor for frame stepping. */
+  const presentedRef = useRef(0);
+  const steppingRef = useRef(false);
 
   const [currentTime, setCurrentTime] = useState(0);
   const [playing, setPlaying] = useState(false);
-  const [fps, setFps] = useState(DEFAULT_FPS);
+  const [cropping, setCropping] = useState(false);
   const [trackWidth, setTrackWidth] = useState(0);
   const [filmstrip, setFilmstrip] = useState<string[]>([]);
 
@@ -66,28 +105,46 @@ export function Editor({
   const step = 1 / fps;
 
   // ─── playhead ───────────────────────────────────────────────────────────────
-  // Driven by rAF instead of `timeupdate` (which only fires ~4×/s and makes the
-  // needle stutter across the track).
+  // `requestVideoFrameCallback` fires once per presented frame and reports the
+  // frame's true timestamp, which makes it both smoother and more accurate than
+  // `timeupdate` (~4×/s) or reading back `currentTime` (just an echo of the seek).
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
 
+    const withCallback = withFrameCallback(video);
+    let handle = 0;
     let raf = 0;
+
+    if (withCallback) {
+      const onFrame = (_: number, meta: { mediaTime: number }) => {
+        presentedRef.current = meta.mediaTime;
+        setCurrentTime(meta.mediaTime);
+        handle = withCallback.requestVideoFrameCallback(onFrame);
+      };
+      handle = withCallback.requestVideoFrameCallback(onFrame);
+    }
+
     const tick = () => {
+      presentedRef.current = video.currentTime;
       setCurrentTime(video.currentTime);
       raf = requestAnimationFrame(tick);
     };
     const onPlay = () => {
       setPlaying(true);
-      cancelAnimationFrame(raf);
-      raf = requestAnimationFrame(tick);
+      if (!withCallback) {
+        cancelAnimationFrame(raf);
+        raf = requestAnimationFrame(tick);
+      }
     };
     const onStop = () => {
       setPlaying(false);
       cancelAnimationFrame(raf);
-      setCurrentTime(video.currentTime);
+      if (!withCallback) setCurrentTime(video.currentTime);
     };
-    const onSeeked = () => setCurrentTime(video.currentTime);
+    const onSeeked = () => {
+      if (!withCallback) setCurrentTime(video.currentTime);
+    };
 
     video.addEventListener("play", onPlay);
     video.addEventListener("pause", onStop);
@@ -95,6 +152,7 @@ export function Editor({
     video.addEventListener("seeked", onSeeked);
     return () => {
       cancelAnimationFrame(raf);
+      if (withCallback && handle) withCallback.cancelVideoFrameCallback(handle);
       video.removeEventListener("play", onPlay);
       video.removeEventListener("pause", onStop);
       video.removeEventListener("ended", onStop);
@@ -102,38 +160,9 @@ export function Editor({
     };
   }, [source.url]);
 
-  // Refines the frame step from the real playback rate the first time it plays.
-  useEffect(() => {
-    const video = videoRef.current as
-      | (HTMLVideoElement & { requestVideoFrameCallback?: (cb: (now: number, meta: { mediaTime: number }) => void) => number })
-      | null;
-    if (!playing || !video?.requestVideoFrameCallback) return;
-
-    let cancelled = false;
-    let previous: number | null = null;
-    const deltas: number[] = [];
-
-    const onFrame = (_: number, meta: { mediaTime: number }) => {
-      if (cancelled) return;
-      if (previous !== null) {
-        const delta = meta.mediaTime - previous;
-        if (delta > 0.002 && delta < 0.5) deltas.push(delta);
-      }
-      previous = meta.mediaTime;
-      if (deltas.length >= 10) {
-        const sorted = [...deltas].sort((a, b) => a - b);
-        setFps(Math.round(1 / sorted[Math.floor(sorted.length / 2)]));
-        return;
-      }
-      video.requestVideoFrameCallback!(onFrame);
-    };
-    video.requestVideoFrameCallback(onFrame);
-    return () => {
-      cancelled = true;
-    };
-  }, [playing]);
-
   // ─── filmstrip ──────────────────────────────────────────────────────────────
+  // Deliberately uncropped: the strip is the map of the whole video, so it stays
+  // useful for navigating even after the user zooms into a corner of the frame.
   useEffect(() => {
     if (!captureReady) return;
     let cancelled = false;
@@ -174,12 +203,67 @@ export function Editor({
       if (!video) return;
       const next = clamp(time, 0, duration);
       video.currentTime = next;
-      setCurrentTime(next);
+      if (!withFrameCallback(video)) {
+        presentedRef.current = next;
+        setCurrentTime(next);
+      }
     },
     [duration],
   );
 
-  const nudge = useCallback((delta: number) => seek((videoRef.current?.currentTime ?? 0) + delta), [seek]);
+  /**
+   * Moves exactly one frame, whichever rate the video actually runs at.
+   *
+   * Seeking by a flat `1/fps` looks right but breaks on variable-rate video —
+   * screen and browser recordings routinely mix frames from half to double the
+   * nominal duration, so a fixed jump skips frames on the short ones and stalls
+   * on the long ones. Instead the seek head creeps outward a quarter-frame at a
+   * time and stops at the first offset that presents a *different* timestamp:
+   * that is the neighbouring frame by construction, never a later one.
+   */
+  const stepFrame = useCallback(
+    async (direction: 1 | -1) => {
+      const video = videoRef.current;
+      if (!video || steppingRef.current) return;
+      video.pause();
+
+      if (!withFrameCallback(video)) {
+        // No frame timestamps available (Firefox): fall back to the measured rate.
+        const index =
+          direction > 0
+            ? Math.floor(video.currentTime * fps + 1e-6)
+            : Math.ceil(video.currentTime * fps - 1e-6);
+        seek((index + direction) / fps + 1e-4);
+        return;
+      }
+
+      steppingRef.current = true;
+      try {
+        const anchor = presentedRef.current;
+        const increment = step / 4;
+        for (let attempt = 1; attempt <= 16; attempt++) {
+          const target = anchor + direction * increment * attempt;
+          if (target < 0 || target > duration) return;
+          const presented = await seekTo(video, target);
+          if (presented === null) continue;
+          if (Math.abs(presented - anchor) > 1e-4) return;
+        }
+      } catch {
+        /* the seek failed; leaving the playhead put is the honest outcome */
+      } finally {
+        steppingRef.current = false;
+      }
+    },
+    [duration, fps, seek, step],
+  );
+
+  const nudge = useCallback(
+    (seconds: number) => {
+      videoRef.current?.pause();
+      seek((videoRef.current?.currentTime ?? 0) + seconds);
+    },
+    [seek],
+  );
 
   const togglePlay = useCallback(() => {
     const video = videoRef.current;
@@ -195,21 +279,23 @@ export function Editor({
     onAdd(video.currentTime, step);
   }, [onAdd, step]);
 
+  const editing = { enabled: !cropping, preventDefault: true };
+
   useHotkeys("space", togglePlay, { preventDefault: true }, [togglePlay]);
-  useHotkeys("left", () => nudge(-1), { preventDefault: true }, [nudge]);
-  useHotkeys("right", () => nudge(1), { preventDefault: true }, [nudge]);
-  useHotkeys("shift+left", () => nudge(-step), { preventDefault: true }, [nudge, step]);
-  useHotkeys("shift+right", () => nudge(step), { preventDefault: true }, [nudge, step]);
-  useHotkeys("home", () => seek(0), { preventDefault: true }, [seek]);
-  useHotkeys("end", () => seek(duration), { preventDefault: true }, [seek, duration]);
+  useHotkeys("left", () => stepFrame(-1), editing, [stepFrame, cropping]);
+  useHotkeys("right", () => stepFrame(1), editing, [stepFrame, cropping]);
+  useHotkeys("shift+left", () => nudge(-1), editing, [nudge, cropping]);
+  useHotkeys("shift+right", () => nudge(1), editing, [nudge, cropping]);
+  useHotkeys("home", () => seek(0), editing, [seek, cropping]);
+  useHotkeys("end", () => seek(duration), editing, [seek, duration, cropping]);
   useHotkeys("k", addHere, { preventDefault: true }, [addHere]);
   useHotkeys(
     "delete,backspace",
     () => {
       if (selectedId) onRemove(selectedId);
     },
-    { preventDefault: true },
-    [selectedId, onRemove],
+    editing,
+    [selectedId, onRemove, cropping],
   );
 
   // Clicking a marker (or a card in the list) moves the needle to that frame.
@@ -285,18 +371,47 @@ export function Editor({
   const pct = (time: number) => `${(time / duration) * 100}%`;
   const buildingStrip = filmstrip.length < FILMSTRIP_COUNT;
 
+  // While picking the area the player has to show the whole frame; the rest of
+  // the time it shows the crop, which is the zoom the user asked for.
+  const displayCrop = cropping ? FULL_CROP : (crop ?? FULL_CROP);
+  const displayAspect = cropAspect(displayCrop, source.width, source.height);
+
   return (
     <div className="flex flex-col gap-3">
-      <div className="rounded-xl overflow-hidden bg-black flex items-center justify-center">
-        <video
-          ref={videoRef}
-          src={source.url}
-          playsInline
-          muted
-          preload="auto"
-          onClick={togglePlay}
-          className="w-full max-h-[52vh] object-contain cursor-pointer"
-        />
+      <div className="flex justify-center">
+        <div
+          className="relative w-full"
+          style={{ maxWidth: `calc(${PLAYER_MAX_HEIGHT} * ${displayAspect})` }}
+        >
+          <ReactCrop
+            crop={cropping && crop ? toPercent(crop) : undefined}
+            onChange={(_, percent) => onCrop(toRect(percent))}
+            disabled={!cropping}
+            minWidth={24}
+            minHeight={24}
+            className="block w-full rounded-xl overflow-hidden bg-black"
+          >
+            <CropBox crop={displayCrop} sourceWidth={source.width} sourceHeight={source.height}>
+              <video
+                ref={videoRef}
+                src={source.url}
+                playsInline
+                muted
+                preload="auto"
+                onClick={cropping ? undefined : togglePlay}
+                className={cropping ? undefined : "cursor-pointer"}
+              />
+            </CropBox>
+          </ReactCrop>
+
+          {cropping && !crop && (
+            <div className="absolute inset-x-0 bottom-3 flex justify-center pointer-events-none">
+              <span className="px-2.5 py-1 rounded-full bg-black/70 text-white text-[11px]">
+                Arraste sobre o vídeo para definir a área
+              </span>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* transport */}
@@ -305,13 +420,13 @@ export function Editor({
           <Button variant="outline" size="icon" onClick={() => seek(0)} title="Início (Home)">
             <ChevronFirst />
           </Button>
-          <Button variant="outline" size="icon" onClick={() => nudge(-step)} title="Quadro anterior (Shift+←)">
+          <Button variant="outline" size="icon" onClick={() => stepFrame(-1)} title="Quadro anterior (←)">
             <SkipBack />
           </Button>
           <Button variant="outline" size="icon" onClick={togglePlay} title="Reproduzir (Espaço)">
             {playing ? <Pause /> : <Play />}
           </Button>
-          <Button variant="outline" size="icon" onClick={() => nudge(step)} title="Próximo quadro (Shift+→)">
+          <Button variant="outline" size="icon" onClick={() => stepFrame(1)} title="Próximo quadro (→)">
             <SkipForward />
           </Button>
           <Button variant="outline" size="icon" onClick={() => seek(duration)} title="Fim (End)">
@@ -319,14 +434,38 @@ export function Editor({
           </Button>
         </div>
 
-        <div className="text-xs tabular-nums px-2">
+        <div className="text-xs tabular-nums px-1">
           <span className="font-medium">{formatTimecode(currentTime)}</span>
           <span className="text-muted-foreground"> / {formatClock(duration)}</span>
+          <span className="text-muted-foreground/60"> · {fps} fps</span>
         </div>
 
-        <Button onClick={addHere} disabled={!captureReady} className="ml-auto" title="Capturar quadro (K)">
-          <Camera /> Capturar quadro
-        </Button>
+        <div className="flex items-center gap-1 ml-auto">
+          {crop && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                onCrop(null);
+                setCropping(false);
+              }}
+              title="Remover o recorte"
+            >
+              Limpar
+            </Button>
+          )}
+          <Button
+            variant={cropping || crop ? "secondary" : "outline"}
+            size="icon"
+            onClick={() => setCropping((value) => !value)}
+            title={cropping ? "Concluir recorte" : "Recortar / aproximar"}
+          >
+            <CropIcon />
+          </Button>
+          <Button onClick={addHere} disabled={!captureReady} title="Capturar quadro (K)">
+            <Camera /> Capturar quadro
+          </Button>
+        </div>
       </div>
 
       {/* timeline */}
@@ -420,9 +559,19 @@ export function Editor({
       </div>
 
       <p className="text-[11px] text-muted-foreground/70">
-        Clique ou arraste na timeline para navegar · <kbd>←</kbd>/<kbd>→</kbd> 1s ·{" "}
-        <kbd>Shift</kbd>+<kbd>←</kbd>/<kbd>→</kbd> 1 quadro · <kbd>Espaço</kbd> reproduzir ·{" "}
-        <kbd>K</kbd> capturar · <kbd>Del</kbd> excluir o quadro selecionado
+        {cropping ? (
+          <>
+            Arraste sobre o vídeo para escolher a área — o recorte vale para todos os quadros
+            exportados. Clique de novo em <CropIcon size={11} className="inline -mt-0.5" /> para
+            concluir.
+          </>
+        ) : (
+          <>
+            Clique ou arraste na timeline para navegar · <kbd>←</kbd>/<kbd>→</kbd> 1 quadro ·{" "}
+            <kbd>Shift</kbd>+<kbd>←</kbd>/<kbd>→</kbd> 1s · <kbd>Espaço</kbd> reproduzir ·{" "}
+            <kbd>K</kbd> capturar · <kbd>Del</kbd> excluir o quadro selecionado
+          </>
+        )}
       </p>
     </div>
   );
