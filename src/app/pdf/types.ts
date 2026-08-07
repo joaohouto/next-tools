@@ -1,6 +1,6 @@
 // ─── shared PDF tool types ─────────────────────────────────────────────────────
 
-export type Mode = "idle" | "choosing" | "merge" | "split" | "to-image" | "organize" | "compress";
+export type Mode = "idle" | "choosing" | "merge" | "split" | "to-image" | "organize" | "compress" | "remove-blank";
 
 export interface MergeItem {
   id: string;
@@ -40,6 +40,14 @@ export interface SplitPart {
 }
 
 export type CompressQuality = "low" | "medium" | "high";
+
+export interface BlankPageInfo {
+  number: number;
+  thumb: string | null;
+  /** fraction (0-1) of pixels that differ from the page background; null while still analyzing */
+  inkRatio: number | null;
+  deleted: boolean;
+}
 
 /** Tracks which tool produced the current file for the chaining breadcrumb. */
 export interface ChainSource {

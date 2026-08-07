@@ -4,7 +4,7 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import { PDFDocument } from "pdf-lib";
 import {
   FileText, Scissors, FileImage, FileStack,
-  ArrowLeft, LayoutGrid, Minimize2, ArrowRight,
+  ArrowLeft, LayoutGrid, Minimize2, ArrowRight, Eraser,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -16,6 +16,7 @@ import { SplitView } from "./views/split";
 import { OrganizeView } from "./views/organize";
 import { CompressView } from "./views/compress";
 import { ToImageView } from "./views/to-image";
+import { RemoveBlankView } from "./views/remove-blank";
 
 // ─── shared small components ──────────────────────────────────────────────────
 
@@ -234,6 +235,8 @@ export default function PdfTool() {
                 description="Reduza o tamanho do arquivo" onClick={() => setMode("compress")} />
               <ActionCard icon={<FileImage size={20} />} title="Para imagem"
                 description="Converta cada página em PNG" onClick={() => setMode("to-image")} />
+              <ActionCard icon={<Eraser size={20} />} title="Remover em branco"
+                description="Detecta e remove páginas vazias automaticamente" onClick={() => setMode("remove-blank")} />
             </div>
           </div>
         )}
@@ -256,6 +259,10 @@ export default function PdfTool() {
 
         {mode === "compress" && chosenFile && (
           <CompressView file={chosenFile} pageCount={chosenPageCount} onBack={backToChoosing} onUseResult={handleUseResult} />
+        )}
+
+        {mode === "remove-blank" && chosenFile && (
+          <RemoveBlankView file={chosenFile} pageCount={chosenPageCount} onBack={backToChoosing} onUseResult={handleUseResult} />
         )}
 
       </div>

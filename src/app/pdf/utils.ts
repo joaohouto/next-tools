@@ -67,6 +67,30 @@ export async function addImagePage(doc: PDFDocument, file: File) {
   page.drawImage(emb, { x: 0, y: 0, width: emb.width, height: emb.height });
 }
 
+/**
+ * Fraction (0-1) of pixels in the canvas whose color differs from the estimated
+ * page background by more than `delta`. Background is estimated from the four
+ * corners (rather than assumed pure white) so slightly tinted scans don't skew
+ * the result. A small `delta` keeps the check sensitive to faint/light-colored
+ * content that a naive "is it pure white" check would miss.
+ */
+export function computeInkRatio(ctx: CanvasRenderingContext2D, w: number, h: number, delta = 10): number {
+  if (w <= 0 || h <= 0) return 0;
+  const { data } = ctx.getImageData(0, 0, w, h);
+  const corners = [0, (w - 1) * 4, (h - 1) * w * 4, ((h - 1) * w + (w - 1)) * 4];
+  let br = 0, bg = 0, bb = 0;
+  for (const c of corners) { br += data[c]; bg += data[c + 1]; bb += data[c + 2]; }
+  br /= corners.length; bg /= corners.length; bb /= corners.length;
+
+  let inkPixels = 0;
+  const total = w * h;
+  for (let i = 0; i < data.length; i += 4) {
+    const dr = data[i] - br, dg = data[i + 1] - bg, db = data[i + 2] - bb;
+    if (Math.sqrt(dr * dr + dg * dg + db * db) > delta) inkPixels++;
+  }
+  return inkPixels / total;
+}
+
 export function makePdfFile(bytes: Uint8Array, name: string): File {
   return new File([bytes as BlobPart], name, { type: "application/pdf" });
 }
