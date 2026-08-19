@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -12,7 +12,19 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
-import { Copy, Plus, X, Edit, Settings, ArrowUpRight, MessageSquare } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  AppWindow,
+  ArrowUpRight,
+  Calendar,
+  Copy,
+  Edit,
+  MessageSquare,
+  Plus,
+  Settings,
+  X,
+} from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { useHotkeys } from "react-hotkeys-hook";
 import { toast } from "sonner";
@@ -46,6 +58,9 @@ export default function ZapLink() {
   const [editingTemplate, setEditingTemplate] = useState<Template | null>(null);
   const [newTemplateName, setNewTemplateName] = useState("");
   const [newTemplateContent, setNewTemplateContent] = useState("");
+
+  const messageRef = useRef<HTMLTextAreaElement>(null);
+  const templateContentRef = useRef<HTMLTextAreaElement>(null);
 
   const cleanPhone = (phoneNumber: string): string => {
     let cleaned = phoneNumber.replace(/\D/g, "");
@@ -141,8 +156,30 @@ export default function ZapLink() {
   const handleVariableChange = (variable: string, value: string) =>
     setVariableValues((prev) => ({ ...prev, [variable]: value }));
 
+  const insertAtCursor = (
+    ref: React.RefObject<HTMLTextAreaElement | null>,
+    value: string,
+    setValue: (value: string) => void,
+    token: string
+  ) => {
+    const el = ref.current;
+    if (!el) {
+      setValue(value + token);
+      return;
+    }
+    const start = el.selectionStart ?? value.length;
+    const end = el.selectionEnd ?? value.length;
+    setValue(value.slice(0, start) + token + value.slice(end));
+    requestAnimationFrame(() => {
+      el.focus();
+      const pos = start + token.length;
+      el.setSelectionRange(pos, pos);
+    });
+  };
+
   const currentVariables = extractVariables(message);
   const whatsappLink = generateWhatsAppLink();
+  const todayExample = SYSTEM_VARIABLES.date();
 
   useHotkeys("ctrl+enter", () => {
     whatsappLink ? openWhatsApp() : toast.error("Por favor, insira um número de telefone válido.");
@@ -153,56 +190,78 @@ export default function ZapLink() {
 
   return (
     <div className="min-h-screen p-6">
-      <div className="max-w-5xl mx-auto">
+      <div className="max-w-5xl mx-auto flex flex-col gap-6">
+
+        {/* Header */}
+        <div>
+          <h1 className="text-2xl font-bold flex items-center gap-2">
+            <AppWindow className="size-6 text-primary" />
+            ZapLink
+          </h1>
+          <p className="text-muted-foreground text-sm mt-1">
+            Abra conversas no WhatsApp sem precisar salvar o número na agenda.
+          </p>
+        </div>
+
+        {/* Templates */}
+        <div className="rounded-2xl border bg-muted/20 p-4 flex flex-col gap-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                Templates
+              </span>
+              {templates.length > 0 && (
+                <Badge variant="secondary" className="h-5 rounded-full px-1.5 text-[10px] font-normal">
+                  {templates.length}
+                </Badge>
+              )}
+            </div>
+            <Button variant="outline" size="sm" onClick={() => openTemplateModal()}>
+              <Plus className="size-3.5" />
+              Novo
+            </Button>
+          </div>
+
+          {templates.length === 0 ? (
+            <div className="flex flex-col items-center gap-1.5 py-10 text-muted-foreground">
+              <MessageSquare className="size-8 opacity-20" />
+              <p className="text-sm">Nenhum template ainda.</p>
+              <p className="text-xs opacity-70 text-center max-w-xs">
+                Crie modelos reutilizáveis com campos dinâmicos, como <code className="bg-muted px-1 py-0.5 rounded text-[11px]">{"${nome}"}</code>
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2 max-h-[26rem] overflow-y-auto pr-0.5">
+              {templates.map((template) => (
+                <div
+                  key={template.id}
+                  className="group rounded-xl border bg-background p-3 hover:border-foreground/20 transition-colors flex flex-col"
+                >
+                  <div className="flex items-center justify-between gap-2 mb-1">
+                    <p className="font-medium text-sm flex-1 truncate">{template.name}</p>
+                    <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button onClick={() => openTemplateModal(template)} className="p-1 hover:bg-muted rounded-md" title="Editar template">
+                        <Edit className="size-3.5 text-muted-foreground" />
+                      </button>
+                      <button onClick={() => removeTemplate(template.id)} className="p-1 hover:bg-destructive/10 rounded-md" title="Excluir template">
+                        <X className="size-3.5 text-destructive" />
+                      </button>
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground line-clamp-2 mb-3 flex-1">{template.content}</p>
+                  <Button size="sm" variant="secondary" className="w-full h-7 text-xs" onClick={() => useTemplate(template)}>
+                    Usar template
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
         <div className="grid lg:grid-cols-2 gap-4">
 
           {/* Left column */}
           <div className="flex flex-col gap-4">
-
-            {/* Templates */}
-            <div className="rounded-2xl border bg-muted/20 p-4 flex flex-col gap-3">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                  Templates
-                </span>
-                <Button variant="outline" size="sm" onClick={() => openTemplateModal()}>
-                  <Plus className="size-3.5" />
-                  Novo
-                </Button>
-              </div>
-
-              {templates.length === 0 ? (
-                <div className="flex flex-col items-center gap-2 py-8 text-muted-foreground">
-                  <MessageSquare className="size-8 opacity-20" />
-                  <p className="text-sm">Nenhum template ainda.</p>
-                </div>
-              ) : (
-                <div className="flex flex-col gap-2 max-h-72 overflow-y-auto pr-0.5">
-                  {templates.map((template) => (
-                    <div
-                      key={template.id}
-                      className="group rounded-xl border bg-background p-3 hover:border-foreground/20 transition-colors"
-                    >
-                      <div className="flex items-center justify-between gap-2 mb-1">
-                        <p className="font-medium text-sm flex-1 truncate">{template.name}</p>
-                        <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button onClick={() => openTemplateModal(template)} className="p-1 hover:bg-muted rounded-md">
-                            <Edit className="size-3.5 text-muted-foreground" />
-                          </button>
-                          <button onClick={() => removeTemplate(template.id)} className="p-1 hover:bg-destructive/10 rounded-md">
-                            <X className="size-3.5 text-destructive" />
-                          </button>
-                        </div>
-                      </div>
-                      <p className="text-xs text-muted-foreground line-clamp-2 mb-3">{template.content}</p>
-                      <Button size="sm" variant="secondary" className="w-full h-7 text-xs" onClick={() => useTemplate(template)}>
-                        Usar template
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
 
             {/* Message */}
             <div className="rounded-2xl border bg-muted/20 p-4 flex flex-col gap-3">
@@ -210,14 +269,32 @@ export default function ZapLink() {
                 Mensagem
               </span>
               <Textarea
+                ref={messageRef}
                 placeholder="Digite sua mensagem ou use um template..."
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
                 className="min-h-[220px] font-mono text-sm resize-none bg-background"
               />
-              <p className="text-xs text-muted-foreground">
-                Use <code className="bg-muted px-1 py-0.5 rounded text-[11px]">${"{variável}"}</code> para criar campos dinâmicos
-              </p>
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-xs text-muted-foreground">
+                <span>
+                  Use <code className="bg-muted px-1 py-0.5 rounded text-[11px]">{"${variável}"}</code> para criar campos dinâmicos
+                </span>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      onClick={() => insertAtCursor(messageRef, message, setMessage, "${date}")}
+                      className="inline-flex items-center gap-1 rounded-md border bg-background px-1.5 py-0.5 font-mono text-[11px] text-foreground/80 hover:border-foreground/30 hover:text-foreground transition-colors"
+                    >
+                      <Calendar className="size-3" />
+                      {"${date}"}
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-[230px] text-xs">
+                    Variável do sistema: preenchida automaticamente com a data de hoje ({todayExample}). Clique para inserir no cursor.
+                  </TooltipContent>
+                </Tooltip>
+              </div>
             </div>
           </div>
 
@@ -233,6 +310,7 @@ export default function ZapLink() {
                 <button
                   onClick={() => setShowPhoneSettings(true)}
                   className="p-1.5 hover:bg-muted rounded-lg transition-colors"
+                  title="Configurações de formatação"
                 >
                   <Settings className="size-3.5 text-muted-foreground" />
                 </button>
@@ -277,26 +355,31 @@ export default function ZapLink() {
                 ))}
               </div>
             )}
-
-            {/* Preview */}
-            {currentVariables.length > 0 && (
-              <div className="rounded-2xl border bg-muted/20 p-4 flex flex-col gap-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                    Prévia
-                  </span>
-                  <Button variant="outline" size="sm" onClick={copyToClipboard}>
-                    <Copy className="size-3.5" />
-                    Copiar
-                  </Button>
-                </div>
-                <div className="rounded-xl bg-background border p-3">
-                  <p className="text-sm whitespace-pre-wrap">{finalMessage}</p>
-                </div>
-              </div>
-            )}
           </div>
         </div>
+
+        {/* Preview */}
+        {message.trim() && (
+          <div className="rounded-2xl border bg-muted/20 p-4 flex flex-col gap-3">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                Prévia
+              </span>
+              <Button variant="outline" size="sm" onClick={copyToClipboard}>
+                <Copy className="size-3.5" />
+                Copiar
+              </Button>
+            </div>
+            <div className="rounded-xl bg-background border p-3">
+              <p className="text-sm whitespace-pre-wrap">{finalMessage}</p>
+            </div>
+          </div>
+        )}
+
+        {/* Shortcuts */}
+        <p className="text-[11px] text-muted-foreground/70 text-center">
+          <kbd>Ctrl</kbd>+<kbd>Enter</kbd> abrir WhatsApp · <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>N</kbd> novo template · <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>S</kbd> configurações de número
+        </p>
       </div>
 
       {/* Template Modal */}
@@ -317,11 +400,32 @@ export default function ZapLink() {
             <div className="flex flex-col gap-1.5">
               <Label className="text-sm font-medium">Conteúdo</Label>
               <Textarea
-                placeholder={`Digite a mensagem...\n\nUse \${variável} para campos dinâmicos.\nEx: Olá, \${nome}! A respeito de \${assunto}.`}
+                ref={templateContentRef}
+                placeholder={`Digite a mensagem...\n\nUse \${variável} para campos dinâmicos.\nEx: Olá, \${nome}! Hoje é \${date}.`}
                 value={newTemplateContent}
                 onChange={(e) => setNewTemplateContent(e.target.value)}
                 className="min-h-[200px] font-mono text-sm resize-none"
               />
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-xs text-muted-foreground">
+                <span>
+                  <code className="bg-muted px-1 py-0.5 rounded text-[11px]">{"${nome}"}</code> vira um campo preenchível
+                </span>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      onClick={() => insertAtCursor(templateContentRef, newTemplateContent, setNewTemplateContent, "${date}")}
+                      className="inline-flex items-center gap-1 rounded-md border bg-background px-1.5 py-0.5 font-mono text-[11px] text-foreground/80 hover:border-foreground/30 hover:text-foreground transition-colors"
+                    >
+                      <Calendar className="size-3" />
+                      {"${date}"}
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-[230px] text-xs">
+                    Variável do sistema: preenchida automaticamente com a data de hoje ({todayExample}), sem pedir preenchimento. Clique para inserir no cursor.
+                  </TooltipContent>
+                </Tooltip>
+              </div>
             </div>
           </div>
           <DialogFooter>
