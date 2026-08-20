@@ -168,65 +168,59 @@ export default function Client() {
     }
   };
 
-  if (photos.length < MIN_PHOTOS) {
-    return (
-      <div className="w-full min-h-screen flex items-center justify-center p-8">
-        <div className="w-full max-w-md flex flex-col gap-4">
-          <FileDropzone
-            onUpload={addPhotos}
-            accept="image/*"
-            multiple
-            icon={<LayoutGrid size={22} className="text-muted-foreground" />}
-            title="Mosaico de Fotos"
-            label="Arraste, clique ou cole (Ctrl+V) suas fotos"
-          />
-          <p className="text-center text-xs text-muted-foreground">
-            {photos.length === 0
-              ? `Envie pelo menos ${MIN_PHOTOS} fotos para montar o mosaico — tudo processado no navegador, sem upload.`
-              : `Falta pelo menos ${MIN_PHOTOS - photos.length} foto para começar.`}
-          </p>
-          {photos.length > 0 && (
-            <div className="flex flex-wrap justify-center gap-2">
-              {photos.map((p) => (
-                <img key={p.id} src={p.previewUrl} alt="" className="h-14 w-14 rounded-lg border object-cover" />
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  }
-
+  const hasEnoughPhotos = photos.length >= MIN_PHOTOS;
   const template = activeTemplate ?? generateTemplate("grid", photos.length);
 
   return (
     <div className="w-screen h-screen p-3 flex flex-col gap-3 lg:flex-row lg:p-4">
       {/* Preview + photo strip */}
       <div className="flex-1 flex flex-col gap-3 min-h-0">
-        <button
-          onClick={resetAll}
-          className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors w-fit"
-        >
-          <ArrowLeft size={13} /> Recomeçar
-        </button>
+        {photos.length > 0 && (
+          <button
+            onClick={resetAll}
+            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors w-fit"
+          >
+            <ArrowLeft size={13} /> Recomeçar
+          </button>
+        )}
 
         <div className="flex-1 min-h-0 rounded-xl border overflow-y-auto flex items-center justify-center p-4 bg-center bg-[radial-gradient(theme(colors.neutral.300)_1px,transparent_1px)] dark:bg-[radial-gradient(theme(colors.neutral.800)_1px,transparent_1px)] bg-[size:20px_20px]">
-          <div className="w-full max-w-2xl">
-            {smartLayout ? (
-              <MosaicPreview ref={previewRef} kind="smart" photos={photos} justified={smartLayout} config={config} />
-            ) : (
-              <MosaicPreview ref={previewRef} kind="grid" photos={photos} template={template} config={config} />
-            )}
-          </div>
+          {hasEnoughPhotos ? (
+            <div className="w-full max-w-2xl">
+              {smartLayout ? (
+                <MosaicPreview ref={previewRef} kind="smart" photos={photos} justified={smartLayout} config={config} />
+              ) : (
+                <MosaicPreview ref={previewRef} kind="grid" photos={photos} template={template} config={config} />
+              )}
+            </div>
+          ) : (
+            <div className="w-full max-w-md flex flex-col gap-4">
+              <FileDropzone
+                onUpload={addPhotos}
+                accept="image/*"
+                multiple
+                icon={<LayoutGrid size={22} className="text-muted-foreground" />}
+                title="Mosaico de Fotos"
+                label="Arraste, clique ou cole (Ctrl+V) suas fotos"
+              />
+              <p className="text-center text-xs text-muted-foreground">
+                {photos.length === 0
+                  ? `Envie pelo menos ${MIN_PHOTOS} fotos para montar o mosaico — tudo processado no navegador, sem upload.`
+                  : `Falta pelo menos ${MIN_PHOTOS - photos.length} foto para começar.`}
+              </p>
+            </div>
+          )}
         </div>
 
-        <PhotoStrip
-          photos={photos}
-          onReorder={reorderPhotos}
-          onRemove={removePhoto}
-          onAddFiles={addPhotos}
-          canAddMore={photos.length < MAX_PHOTOS}
-        />
+        {photos.length > 0 && (
+          <PhotoStrip
+            photos={photos}
+            onReorder={reorderPhotos}
+            onRemove={removePhoto}
+            onAddFiles={addPhotos}
+            canAddMore={photos.length < MAX_PHOTOS}
+          />
+        )}
       </div>
 
       {/* Settings sidebar */}
@@ -234,11 +228,11 @@ export default function Client() {
         <MosaicSettings config={config} photoCount={photos.length} onConfigChange={updateConfig} />
 
         <div className="shrink-0 grid grid-cols-2 gap-2 p-3 border-t bg-muted/30">
-          <Button variant="outline" size="sm" onClick={handleCopy} disabled={busy !== null}>
+          <Button variant="outline" size="sm" onClick={handleCopy} disabled={busy !== null || !hasEnoughPhotos}>
             {busy === "copy" ? <Spinner className="size-3.5" /> : <CopyIcon className="size-3.5" />}
             Copiar
           </Button>
-          <Button size="sm" onClick={handleDownload} disabled={busy !== null}>
+          <Button size="sm" onClick={handleDownload} disabled={busy !== null || !hasEnoughPhotos}>
             {busy === "download" ? <Spinner className="size-3.5" /> : <DownloadIcon className="size-3.5" />}
             Download
           </Button>
