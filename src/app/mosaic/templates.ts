@@ -67,9 +67,9 @@ function makeGridTemplate(n: number): MosaicTemplate {
   };
 }
 
-/** Generates a procedural (non-bento) template sized for the live photo count `n`. */
+/** Generates a procedural (non-bento, non-smart) template sized for the live photo count `n`. */
 export function generateTemplate(
-  category: Exclude<MosaicCategory, "bento">,
+  category: Exclude<MosaicCategory, "bento" | "smart">,
   n: number,
 ): MosaicTemplate {
   if (category === "columns") return makeColumnsTemplate(n);

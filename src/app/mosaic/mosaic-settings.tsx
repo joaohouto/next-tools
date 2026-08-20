@@ -18,10 +18,11 @@ import { BENTO_TEMPLATES, MAX_CUSTOM_DIMENSION, MIN_CUSTOM_DIMENSION, RATIO_OPTI
 import type { MosaicCategory, MosaicConfig, MosaicTemplate, SizePresetId } from "./types";
 import { cn } from "@/lib/utils";
 
-const PROCEDURAL_CATEGORIES: { id: Extract<MosaicCategory, "grid" | "columns" | "rows">; label: string }[] = [
+const LAYOUT_OPTIONS: { id: Extract<MosaicCategory, "grid" | "columns" | "rows" | "smart">; label: string }[] = [
   { id: "grid", label: "Grade" },
   { id: "columns", label: "Colunas" },
   { id: "rows", label: "Linhas" },
+  { id: "smart", label: "Inteligente" },
 ];
 
 function SectionHeader({ title }: { title: string }) {
@@ -93,13 +94,13 @@ export function MosaicSettings({ config, photoCount, onConfigChange }: MosaicSet
       <div className="flex flex-col gap-4 p-4">
         <SectionHeader title="Layout" />
 
-        <div className="flex gap-2">
-          {PROCEDURAL_CATEGORIES.map((c) => (
+        <div className="grid grid-cols-2 gap-2">
+          {LAYOUT_OPTIONS.map((c) => (
             <button
               key={c.id}
               onClick={() => onConfigChange({ templateCategory: c.id, bentoTemplateId: null })}
               className={cn(
-                "flex-1 px-3 py-1.5 rounded-lg border text-xs font-medium transition-all",
+                "px-3 py-1.5 rounded-lg border text-xs font-medium transition-all",
                 config.templateCategory === c.id
                   ? "bg-primary text-primary-foreground border-primary"
                   : "hover:border-foreground/40",
@@ -109,6 +110,14 @@ export function MosaicSettings({ config, photoCount, onConfigChange }: MosaicSet
             </button>
           ))}
         </div>
+
+        {config.templateCategory === "smart" && (
+          <p className="text-[11px] text-muted-foreground leading-relaxed -mt-2">
+            No modo Inteligente a proporção final é aproximada: cada foto é só
+            escalada (nunca cortada além do necessário) para manter a
+            proporção original o máximo possível.
+          </p>
+        )}
 
         <div className="space-y-1.5">
           <Label className="text-xs text-muted-foreground">Bento</Label>

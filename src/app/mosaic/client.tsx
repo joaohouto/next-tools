@@ -7,7 +7,14 @@ import FileDropzone from "@/components/file-dropzone";
 import { Spinner } from "@/components/spinner";
 import { Button } from "@/components/ui/button";
 import { copyImage, exportAsImage } from "@/lib/export-image";
-import { fileToDataUrl, getExportDimensions } from "./helpers";
+import {
+  computeJustifiedLayout,
+  fileToDataUrl,
+  getExportDimensions,
+  getImageDimensions,
+  getPreviewRatio,
+  getSmartContainerWidth,
+} from "./helpers";
 import { MosaicPreview } from "./mosaic-preview";
 import { MosaicSettings } from "./mosaic-settings";
 import { PhotoStrip } from "./photo-strip";
@@ -51,11 +58,17 @@ export default function Client() {
         toast.info(`Apenas ${accepted.length} de ${images.length} fotos foram adicionadas (máximo de ${MAX_PHOTOS}).`);
       }
       const newItems: MosaicPhoto[] = await Promise.all(
-        accepted.map(async (file) => ({
-          id: `${file.name}-${file.size}-${Date.now()}-${Math.random()}`,
-          file,
-          previewUrl: await fileToDataUrl(file),
-        })),
+        accepted.map(async (file) => {
+          const previewUrl = await fileToDataUrl(file);
+          const { width, height } = await getImageDimensions(previewUrl);
+          return {
+            id: `${file.name}-${file.size}-${Date.now()}-${Math.random()}`,
+            file,
+            previewUrl,
+            width,
+            height,
+          };
+        }),
       );
       setPhotos((prev) => [...prev, ...newItems]);
     },
@@ -81,7 +94,7 @@ export default function Client() {
   };
 
   const activeTemplate = useMemo(() => {
-    if (photos.length < MIN_PHOTOS) return null;
+    if (photos.length < MIN_PHOTOS || config.templateCategory === "smart") return null;
     if (config.templateCategory === "bento") {
       return BENTO_TEMPLATES.find((t) => t.id === config.bentoTemplateId && t.cells.length === photos.length) ?? null;
     }
@@ -96,7 +109,39 @@ export default function Client() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTemplate, config.templateCategory, photos.length]);
 
-  const exportDimensions = useMemo(() => getExportDimensions(config), [config]);
+  const smartLayout = useMemo(() => {
+    if (config.templateCategory !== "smart" || photos.length < MIN_PHOTOS) return null;
+    const containerWidth = getSmartContainerWidth(config);
+    return computeJustifiedLayout(photos, containerWidth, config.gap, getPreviewRatio(config));
+  }, [config, photos]);
+
+  const exportDimensions = useMemo(() => {
+    if (smartLayout) {
+      const width = getSmartContainerWidth(config);
+      return { width, height: Math.round(width / smartLayout.aspectRatio) };
+    }
+    return getExportDimensions(config);
+  }, [config, smartLayout]);
+
+  // Paste-to-add stays live once the editor replaces the upload gate: FileDropzone's
+  // own paste listener only exists while it's mounted, i.e. before MIN_PHOTOS is reached.
+  useEffect(() => {
+    if (photos.length < MIN_PHOTOS) return;
+    const handlePaste = (e: ClipboardEvent) => {
+      const items = e.clipboardData?.items;
+      if (!items) return;
+      const files: File[] = [];
+      for (const item of Array.from(items)) {
+        if (item.kind === "file") {
+          const file = item.getAsFile();
+          if (file) files.push(file);
+        }
+      }
+      if (files.length > 0) addPhotos(files);
+    };
+    window.addEventListener("paste", handlePaste);
+    return () => window.removeEventListener("paste", handlePaste);
+  }, [photos.length, addPhotos]);
 
   const handleCopy = async () => {
     setBusy("copy");
@@ -167,7 +212,11 @@ export default function Client() {
 
         <div className="flex-1 min-h-0 rounded-xl border overflow-y-auto flex items-center justify-center p-4 bg-center bg-[radial-gradient(theme(colors.neutral.300)_1px,transparent_1px)] dark:bg-[radial-gradient(theme(colors.neutral.800)_1px,transparent_1px)] bg-[size:20px_20px]">
           <div className="w-full max-w-2xl">
-            <MosaicPreview ref={previewRef} photos={photos} template={template} config={config} />
+            {smartLayout ? (
+              <MosaicPreview ref={previewRef} kind="smart" photos={photos} justified={smartLayout} config={config} />
+            ) : (
+              <MosaicPreview ref={previewRef} kind="grid" photos={photos} template={template} config={config} />
+            )}
           </div>
         </div>
 
