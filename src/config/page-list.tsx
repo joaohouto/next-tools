@@ -21,6 +21,7 @@ import {
   Zap,
   Orbit,
   Film,
+  LayoutGrid,
 } from "lucide-react";
 
 import type { ToolUsageRecord } from "@/hooks/use-tool-usage";
@@ -117,6 +118,14 @@ export const UNORDERED_LIST = [
       "Extraia quadros de um vídeo pela timeline, adicione legendas e exporte em PDF ou imagem única.",
     path: "/frames",
     icon: <Film />,
+    category: "Arquivos" as PageCategory,
+  },
+  {
+    title: "Mosaico",
+    description:
+      "Monte mosaicos e colagens com suas fotos, escolha o layout e a proporção, e baixe em alta resolução.",
+    path: "/mosaic",
+    icon: <LayoutGrid />,
     category: "Arquivos" as PageCategory,
   },
   {
